@@ -26,6 +26,7 @@ import quranArabicRaw from "./data/quran-uthmani.txt?raw";
 import quranEnglishRaw from "./data/quran-en-saheeh.txt?raw";
 import quranHindiRaw from "./data/quran-hi-farooq-nadwi.txt?raw";
 import quranUrduRaw from "./data/quran-ur-jalandhry.txt?raw";
+import PrayerPage from "./features/prayer/PrayerPage";
 
 type Page = "home" | "quran" | "prayer" | "ai" | "more";
 
@@ -576,21 +577,6 @@ function QuranPage() {
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function PrayerPage() {
-  return (
-    <div className="page placeholder-page">
-      <div className="placeholder-icon">
-        <Clock3 size={30} />
-      </div>
-      <h1>Prayer Times</h1>
-      <p>
-        Accurate prayer calculation, Jamaat timings and My Masjid
-        will be available here.
-      </p>
     </div>
   );
 }
