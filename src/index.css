@@ -1096,3 +1096,168 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+.ramadan-calendar-card {
+  background: var(--card-bg, rgba(255,255,255,.92));
+  border: 1px solid rgba(22,101,52,.12);
+  border-radius: 24px;
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(15,23,42,.06);
+}
+
+.ramadan-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-kicker {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  opacity: .55;
+  margin-bottom: 5px;
+}
+
+.ramadan-card-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.ramadan-moon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(22,101,52,.1);
+  font-size: 23px;
+}
+
+.islamic-date-box {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(22,101,52,.07);
+}
+
+.islamic-date-box strong,
+.islamic-date-box span {
+  display: block;
+}
+
+.islamic-date-box strong {
+  font-size: 17px;
+}
+
+.islamic-date-box span {
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: .62;
+}
+
+.ramadan-times-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.ramadan-time-item {
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(15,23,42,.045);
+}
+
+.ramadan-time-item span,
+.ramadan-time-item small {
+  display: block;
+}
+
+.ramadan-time-item span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ramadan-time-item strong {
+  display: block;
+  margin: 7px 0 2px;
+  font-size: 20px;
+}
+
+.ramadan-time-item small {
+  font-size: 10px;
+  opacity: .55;
+}
+
+.ramadan-adjustment {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(15,23,42,.08);
+}
+
+.ramadan-adjustment strong,
+.ramadan-adjustment small {
+  display: block;
+}
+
+.ramadan-adjustment strong {
+  font-size: 12px;
+}
+
+.ramadan-adjustment small {
+  margin-top: 3px;
+  font-size: 10px;
+  opacity: .55;
+}
+
+.adjustment-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.adjustment-control button {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(22,101,52,.1);
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.adjustment-control span {
+  min-width: 55px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ramadan-note {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(245,158,11,.08);
+  font-size: 10px;
+  line-height: 1.5;
+  opacity: .75;
+}
+
+@media (max-width: 480px) {
+  .ramadan-times-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ramadan-adjustment {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

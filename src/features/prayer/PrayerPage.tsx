@@ -1,3 +1,4 @@
+import RamadanCalendarCard from "../ramadan/RamadanCalendarCard";
 import React, { useEffect, useMemo, useState } from "react";
 import MasjidJamaatCard from "../masjid/MasjidJamaatCard";
 import {
@@ -422,8 +423,12 @@ export default function PrayerPage() {
         </div>
       </section>
 
-      <MasjidJamaatCard />
+<MasjidJamaatCard />
 
+<RamadanCalendarCard
+  fajr={prayerTimes?.fajr ?? null}
+  maghrib={prayerTimes?.maghrib ?? null}
+/>
       <section className="reminder-card">
         <div className="reminder-icon">
           {notifications ? <Bell size={20} /> : <BellOff size={20} />}
