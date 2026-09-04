@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import MasjidJamaatCard from "../masjid/MasjidJamaatCard";
 import {
   Coordinates,
   CalculationMethod,
@@ -421,22 +422,7 @@ export default function PrayerPage() {
         </div>
       </section>
 
-      <section className="masjid-placeholder-card">
-        <div className="masjid-icon">
-          <Navigation size={22} />
-        </div>
-
-        <div>
-          <span className="eyebrow">MY MASJID</span>
-          <h3>Masjid & Jamaat Times</h3>
-          <p>
-            Jamaat/Iqamah timings will come from a verified masjid
-            timetable. They are not automatically guessed.
-          </p>
-        </div>
-
-        <ChevronDown size={18} />
-      </section>
+      <MasjidJamaatCard />
 
       <section className="reminder-card">
         <div className="reminder-icon">

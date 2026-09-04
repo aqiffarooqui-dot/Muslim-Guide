@@ -895,3 +895,204 @@ button {
     text-align: right;
   }
 }
+
+/* ================= MASJID + JAMAAT ================= */
+
+.masjid-jamaat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+  border-radius: 24px;
+  border: 1px solid var(--border, rgba(20, 100, 70, 0.14));
+  background: var(--card, rgba(255, 255, 255, 0.82));
+  box-shadow: 0 10px 30px rgba(20, 70, 50, 0.06);
+}
+
+.masjid-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.masjid-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+}
+
+.masjid-title-wrap h3,
+.masjid-empty-content h3 {
+  margin: 3px 0;
+}
+
+.masjid-title-wrap p {
+  margin: 4px 0 0;
+  opacity: 0.65;
+  font-size: 0.86rem;
+}
+
+.masjid-icon {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: rgba(20, 130, 90, 0.1);
+}
+
+.jamaat-section,
+.jumuah-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.jamaat-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jamaat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.jamaat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 13px;
+  border-radius: 14px;
+  background: rgba(20, 130, 90, 0.055);
+}
+
+.jamaat-row span {
+  opacity: 0.7;
+}
+
+.jumuah-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.jumuah-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 14px;
+  border-radius: 15px;
+  background: rgba(20, 130, 90, 0.07);
+}
+
+.jumuah-grid span {
+  font-size: 0.8rem;
+  opacity: 0.65;
+}
+
+.masjid-data-note {
+  opacity: 0.58;
+  line-height: 1.45;
+}
+
+.masjid-empty-card {
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+.masjid-empty-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.masjid-empty-content p {
+  margin: 0 0 5px;
+  opacity: 0.68;
+  line-height: 1.5;
+}
+
+.masjid-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.masjid-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.masjid-form label > span {
+  font-size: 0.82rem;
+  font-weight: 600;
+  opacity: 0.72;
+}
+
+.masjid-form input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border, rgba(20, 100, 70, 0.16));
+  border-radius: 13px;
+  padding: 12px 13px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+
+.masjid-form input:focus {
+  border-color: rgba(20, 130, 90, 0.5);
+}
+
+.masjid-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.masjid-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 13px;
+  padding: 11px 15px;
+  cursor: pointer;
+  background: #12805a;
+  color: white;
+  font: inherit;
+  font-weight: 700;
+}
+
+.primary-button:hover {
+  opacity: 0.92;
+}
+
+@media (max-width: 600px) {
+  .masjid-empty-card {
+    flex-direction: column;
+  }
+
+  .jamaat-grid,
+  .jumuah-grid,
+  .masjid-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
