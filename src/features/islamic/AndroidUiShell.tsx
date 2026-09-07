@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BookOpen, Moon, Sun, X } from "lucide-react";
+import { BookOpen, Moon, Sun, X, ArrowLeft } from "lucide-react";
 import HadithExplorer from "./HadithExplorer";
 import "./android-ui.css";
 
@@ -30,54 +30,102 @@ export default function AndroidUiShell() {
   }, [theme]);
 
   useEffect(() => {
-    let allowNextLibraryNavigation = false;
+    let allowNextNavigation = false;
+
     const labelNavigation = () => {
       document.querySelectorAll<HTMLButtonElement>(".bottom-nav button").forEach((button) => {
         const text = button.querySelector("span");
         if (text?.textContent?.trim() === "Quran") text.textContent = "Quran & Hadith";
       });
     };
+
+    const findNavButton = (label: string) =>
+      Array.from(document.querySelectorAll<HTMLButtonElement>(".bottom-nav button")).find(
+        (button) => button.querySelector("span")?.textContent?.trim() === label
+      );
+
     const onClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null;
       const button = target?.closest<HTMLButtonElement>(".bottom-nav button");
       if (!button) return;
+
       const label = button.querySelector("span")?.textContent?.trim();
-      if (label !== "Quran & Hadith") return;
-      if (allowNextLibraryNavigation) {
-        allowNextLibraryNavigation = false;
+      if (!label) return;
+
+      if (allowNextNavigation) {
+        allowNextNavigation = false;
         return;
       }
+
       event.preventDefault();
       event.stopPropagation();
-      setLibraryTab("quran");
-      setLibraryOpen(true);
+      window.history.pushState({ muslimGuideNav: label }, "", window.location.href);
+
+      if (label === "Quran & Hadith") {
+        setLibraryTab("quran");
+        setLibraryOpen(true);
+        return;
+      }
+
+      allowNextNavigation = true;
+      button.click();
     };
+
+    const onPopState = () => {
+      if (libraryOpen) {
+        setLibraryOpen(false);
+        return;
+      }
+      const previous = window.history.state?.muslimGuideNav;
+      if (typeof previous === "string") {
+        const previousButton = findNavButton(previous);
+        if (previousButton) {
+          allowNextNavigation = true;
+          previousButton.click();
+        }
+      }
+    };
+
     labelNavigation();
     const observer = new MutationObserver(labelNavigation);
     observer.observe(document.body, { childList: true, subtree: true });
     document.addEventListener("click", onClick, true);
+    window.addEventListener("popstate", onPopState);
+
     (window as Window & { __mgAllowQuranNavigation?: () => void }).__mgAllowQuranNavigation = () => {
-      allowNextLibraryNavigation = true;
+      allowNextNavigation = true;
     };
+
     return () => {
       observer.disconnect();
       document.removeEventListener("click", onClick, true);
+      window.removeEventListener("popstate", onPopState);
       delete (window as Window & { __mgAllowQuranNavigation?: () => void }).__mgAllowQuranNavigation;
     };
-  }, []);
+  }, [libraryOpen]);
 
   useEffect(() => {
     const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
-    if (meta) meta.content = theme === "dark" ? "#0b0d10" : "#0f766e";
+    if (meta) {
+      const resolved = document.documentElement.dataset.resolvedTheme;
+      meta.content = resolved === "dark" ? "#0b0d10" : "#0f766e";
+    }
   }, [theme]);
 
   const openQuran = () => {
     setLibraryOpen(false);
-    (window as Window & { __mgAllowQuranNavigation?: () => void }).__mgAllowQuranNavigation?.();
     const quranButton = Array.from(document.querySelectorAll<HTMLButtonElement>(".bottom-nav button")).find(
       (button) => button.querySelector("span")?.textContent?.includes("Quran")
     );
-    quranButton?.click();
+    if (quranButton) {
+      (window as Window & { __mgAllowQuranNavigation?: () => void }).__mgAllowQuranNavigation?.();
+      quranButton.click();
+    }
+  };
+
+  const closeLibrary = () => {
+    setLibraryOpen(false);
+    if (window.history.state?.muslimGuideNav) window.history.back();
   };
 
   return (
@@ -93,8 +141,11 @@ export default function AndroidUiShell() {
         <div className="quran-hadith-overlay" role="dialog" aria-modal="true" aria-label="Quran and Hadith">
           <div className="quran-hadith-sheet">
             <header className="quran-hadith-header">
-              <div><span className="android-eyebrow">ISLAMIC LIBRARY</span><h2>Quran &amp; Hadith</h2></div>
-              <button className="android-close-button" onClick={() => setLibraryOpen(false)} aria-label="Close"><X size={21} /></button>
+              <div className="quran-hadith-title-row">
+                <button className="android-close-button android-back-button" onClick={closeLibrary} aria-label="Back"><ArrowLeft size={20} /></button>
+                <div><span className="android-eyebrow">ISLAMIC LIBRARY</span><h2>Quran &amp; Hadith</h2></div>
+              </div>
+              <button className="android-close-button" onClick={closeLibrary} aria-label="Close"><X size={21} /></button>
             </header>
             <div className="android-segmented-control" role="tablist">
               <button className={libraryTab === "quran" ? "selected" : ""} onClick={() => setLibraryTab("quran")}><BookOpen size={17} /> Quran</button>
