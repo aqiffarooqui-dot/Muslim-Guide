@@ -23,7 +23,6 @@ jobs:
           java-version: 21
       - uses: android-actions/setup-android@v3
       - run: npm ci
-
       - name: Set version
         id: version
         shell: bash
@@ -31,17 +30,14 @@ jobs:
           BASE_VERSION=$(node -p "require('./package.json').version")
           echo "version_name=${BASE_VERSION}.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
           echo "version_code=$((100000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_OUTPUT"
-
       - name: Build web app
         env:
           VITE_APP_VERSION: ${{ steps.version.outputs.version_name }}
         run: npm run build
-
       - name: Prepare Capacitor Android
         run: |
           if [ ! -d android ]; then npx cap add android; fi
           npx cap sync android
-
       - name: Inject native Android updater
         shell: bash
         run: |
@@ -101,13 +97,11 @@ jobs:
           main.write_text(s)
           manifest=Path('android/app/src/main/AndroidManifest.xml'); ms=manifest.read_text()
           if 'REQUEST_INSTALL_PACKAGES' not in ms:
-            ms=ms.replace('<manifest','<manifest',1)
-            ms=ms.replace('</manifest>','''    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\n</manifest>''',1)
+            ms=ms.replace('</manifest>','    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\n</manifest>',1)
             provider='''        <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.fileprovider" android:exported="false" android:grantUriPermissions="true"><meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" /></provider>'''
             ms=ms.replace('</application>',provider+'\n    </application>',1)
           manifest.write_text(ms)
           PY
-
       - name: Configure version
         working-directory: android
         env:
@@ -122,7 +116,6 @@ jobs:
           s=s.replace('versionName "1.0"',f'versionName "{os.environ["VERSION_NAME"]}"')
           p.write_text(s)
           PY
-
       - name: Configure production signing
         if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
         env:
@@ -143,28 +136,27 @@ jobs:
           p=Path('android/app/build.gradle'); s=p.read_text()
           if 'keystorePropertiesFile' not in s:
             s=s.replace('android {','''android {\n  def keystorePropertiesFile = rootProject.file("keystore.properties")\n  def keystoreProperties = new Properties()\n  if (keystorePropertiesFile.exists()) keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\n  signingConfigs { release { if (keystorePropertiesFile.exists()) { storeFile file(keystoreProperties['storeFile']); storePassword keystoreProperties['storePassword']; keyAlias keystoreProperties['keyAlias']; keyPassword keystoreProperties['keyPassword'] } } }''',1)
-          if 'signingConfig signingConfigs.release' not in s: s=s.replace('release {','release {\n      signingConfig signingConfigs.release',1)
+          if 'signingConfig signingConfigs.release' not in s:
+            before, after = s.split('buildTypes {',1)
+            after=after.replace('release {','release {\n      signingConfig signingConfigs.release',1)
+            s=before+'buildTypes {'+after
           p.write_text(s)
           PY
-
       - name: Build APK
         working-directory: android
         run: |
           if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then ./gradlew assembleRelease --no-daemon; else ./gradlew assembleDebug --no-daemon; fi
-
       - name: Package APK
         env:
           VERSION_NAME: ${{ steps.version.outputs.version_name }}
         run: |
           mkdir -p release
           if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then cp android/app/build/outputs/apk/release/app-release.apk "release/Muslim-Guide-${VERSION_NAME}.apk"; else cp android/app/build/outputs/apk/debug/app-debug.apk "release/Muslim-Guide-${VERSION_NAME}-debug.apk"; fi
-
       - uses: actions/upload-artifact@v4
         with:
           name: Muslim-Guide-Android-${{ steps.version.outputs.version_name }}
           path: release/*.apk
           retention-days: 30
-
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
