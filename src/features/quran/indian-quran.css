@@ -1,0 +1,41 @@
+/* Indian / South-Asian Quran reading presentation */
+.arabic-text,
+.surah-arabic,
+.quran-header-title span {
+  font-family: "Noto Naskh Arabic", "Noto Serif Arabic", "Amiri", "Scheherazade New", serif;
+  direction: rtl;
+  unicode-bidi: plaintext;
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  text-rendering: optimizeLegibility;
+}
+
+.arabic-text {
+  font-size: clamp(28px, 5.8vw, 38px);
+  line-height: 2.05;
+  text-align: right;
+  letter-spacing: 0;
+  word-spacing: 0.06em;
+  padding: 10px 2px 14px;
+}
+
+.surah-arabic {
+  font-size: 23px;
+  line-height: 1.8;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.quran-header-title span {
+  font-size: 17px;
+}
+
+@media (min-width: 700px) {
+  .arabic-text {
+    font-size: 40px;
+    line-height: 2.15;
+  }
+
+  .surah-arabic {
+    font-size: 25px;
+  }
+}
