@@ -23,16 +23,16 @@ jobs:
           cache: npm
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Set app version
         id: version
@@ -67,32 +67,32 @@ jobs:
           test -n "$KEY_PASSWORD" || { echo "Missing ANDROID_KEY_PASSWORD"; exit 1; }
           echo "$KEYSTORE_B64" | base64 --decode > android/muslim-guide-release.jks
           cat > android/keystore.properties <<EOF
-          storeFile=muslim-guide-release.jks
-          storePassword=$KEYSTORE_PASSWORD
-          keyAlias=$KEY_ALIAS
-          keyPassword=$KEY_PASSWORD
-          EOF
+storeFile=muslim-guide-release.jks
+storePassword=$KEYSTORE_PASSWORD
+keyAlias=$KEY_ALIAS
+keyPassword=$KEY_PASSWORD
+EOF
           python3 - <<'PY'
           from pathlib import Path
           p = Path('android/app/build.gradle')
           s = p.read_text()
           if 'keystorePropertiesFile' not in s:
               signing = """    def keystorePropertiesFile = rootProject.file('keystore.properties')
-              def keystoreProperties = new Properties()
-              if (keystorePropertiesFile.exists()) {
-                  keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-              }
-              signingConfigs {
-                  release {
-                      if (keystorePropertiesFile.exists()) {
-                          storeFile file(keystoreProperties['storeFile'])
-                          storePassword keystoreProperties['storePassword']
-                          keyAlias keystoreProperties['keyAlias']
-                          keyPassword keystoreProperties['keyPassword']
-                      }
-                  }
-              }
-          """
+    def keystoreProperties = new Properties()
+    if (keystorePropertiesFile.exists()) {
+        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    }
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
+"""
               s = s.replace('android {', 'android {\n' + signing, 1)
           if 'signingConfig signingConfigs.release' not in s:
               s = s.replace('        release {', '        release {\n            signingConfig signingConfigs.release', 1)
