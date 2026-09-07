@@ -4,7 +4,6 @@ import HadithExplorer from "./HadithExplorer";
 import "./android-ui.css";
 
 type LibraryTab = "quran" | "hadith";
-
 type Theme = "system" | "light" | "dark";
 
 function getInitialTheme(): Theme {
@@ -21,7 +20,6 @@ export default function AndroidUiShell() {
     const root = document.documentElement;
     root.dataset.theme = theme;
     localStorage.setItem("muslim-guide-theme", theme);
-
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
       root.dataset.resolvedTheme = theme === "system" ? (media.matches ? "dark" : "light") : theme;
@@ -32,32 +30,39 @@ export default function AndroidUiShell() {
   }, [theme]);
 
   useEffect(() => {
+    let allowNextLibraryNavigation = false;
     const labelNavigation = () => {
       document.querySelectorAll<HTMLButtonElement>(".bottom-nav button").forEach((button) => {
         const text = button.querySelector("span");
         if (text?.textContent?.trim() === "Quran") text.textContent = "Quran & Hadith";
       });
     };
-
     const onClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null;
       const button = target?.closest<HTMLButtonElement>(".bottom-nav button");
       if (!button) return;
       const label = button.querySelector("span")?.textContent?.trim();
       if (label !== "Quran & Hadith") return;
+      if (allowNextLibraryNavigation) {
+        allowNextLibraryNavigation = false;
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
       setLibraryTab("quran");
       setLibraryOpen(true);
     };
-
     labelNavigation();
     const observer = new MutationObserver(labelNavigation);
     observer.observe(document.body, { childList: true, subtree: true });
     document.addEventListener("click", onClick, true);
+    (window as Window & { __mgAllowQuranNavigation?: () => void }).__mgAllowQuranNavigation = () => {
+      allowNextLibraryNavigation = true;
+    };
     return () => {
       observer.disconnect();
       document.removeEventListener("click", onClick, true);
+      delete (window as Window & { __mgAllowQuranNavigation?: () => void }).__mgAllowQuranNavigation;
     };
   }, []);
 
@@ -68,24 +73,17 @@ export default function AndroidUiShell() {
 
   const openQuran = () => {
     setLibraryOpen(false);
+    (window as Window & { __mgAllowQuranNavigation?: () => void }).__mgAllowQuranNavigation?.();
     const quranButton = Array.from(document.querySelectorAll<HTMLButtonElement>(".bottom-nav button")).find(
       (button) => button.querySelector("span")?.textContent?.includes("Quran")
     );
-    if (quranButton) {
-      const clone = quranButton.cloneNode(true) as HTMLButtonElement;
-      quranButton.replaceWith(clone);
-      clone.click();
-    }
+    quranButton?.click();
   };
 
   return (
     <>
       <div className="android-ui-toolbar" aria-label="Theme controls">
-        <button
-          className="android-theme-pill"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          aria-label="Toggle day and night mode"
-        >
+        <button className="android-theme-pill" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Toggle day and night mode">
           {theme === "dark" ? <Moon size={17} /> : <Sun size={17} />}
           <span>{theme === "dark" ? "Night" : "Day"}</span>
         </button>
@@ -95,24 +93,13 @@ export default function AndroidUiShell() {
         <div className="quran-hadith-overlay" role="dialog" aria-modal="true" aria-label="Quran and Hadith">
           <div className="quran-hadith-sheet">
             <header className="quran-hadith-header">
-              <div>
-                <span className="android-eyebrow">ISLAMIC LIBRARY</span>
-                <h2>Quran &amp; Hadith</h2>
-              </div>
-              <button className="android-close-button" onClick={() => setLibraryOpen(false)} aria-label="Close">
-                <X size={21} />
-              </button>
+              <div><span className="android-eyebrow">ISLAMIC LIBRARY</span><h2>Quran &amp; Hadith</h2></div>
+              <button className="android-close-button" onClick={() => setLibraryOpen(false)} aria-label="Close"><X size={21} /></button>
             </header>
-
             <div className="android-segmented-control" role="tablist">
-              <button className={libraryTab === "quran" ? "selected" : ""} onClick={() => setLibraryTab("quran")}>
-                <BookOpen size={17} /> Quran
-              </button>
-              <button className={libraryTab === "hadith" ? "selected" : ""} onClick={() => setLibraryTab("hadith")}>
-                📚 Hadith
-              </button>
+              <button className={libraryTab === "quran" ? "selected" : ""} onClick={() => setLibraryTab("quran")}><BookOpen size={17} /> Quran</button>
+              <button className={libraryTab === "hadith" ? "selected" : ""} onClick={() => setLibraryTab("hadith")}>📚 Hadith</button>
             </div>
-
             {libraryTab === "quran" ? (
               <section className="android-library-card">
                 <div className="android-library-icon"><BookOpen size={28} /></div>
