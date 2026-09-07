@@ -1,0 +1,23 @@
+import { useMemo, useState } from "react";
+import { Bookmark, BookmarkCheck, Copy, Search, Share2 } from "lucide-react";
+
+type Dua = { id: string; category: string; title: string; arabic: string; transliteration: string; meaning: string; source: string };
+
+const DUAS: Dua[] = [
+ { id:"sleep", category:"Sleep", title:"Before sleeping", arabic:"بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا", transliteration:"Bismika Allahumma amutu wa ahya.", meaning:"In Your name, O Allah, I die and I live.", source:"Sahih al-Bukhari 6324" },
+ { id:"forgive", category:"Forgiveness", title:"Sayyid al-Istighfar", arabic:"اللَّهُمَّ أَنْتَ رَبِّي لاَ إِلَهَ إِلاَّ أَنْتَ، خَلَقْتَنِي وَأَنَا عَبْدُكَ...", transliteration:"Allahumma anta Rabbi la ilaha illa Anta, khalaqtani wa ana abduka...", meaning:"O Allah, You are my Lord; there is no deity except You. You created me and I am Your servant...", source:"Sahih al-Bukhari 6306" },
+ { id:"food", category:"Food", title:"Before eating", arabic:"بِسْمِ اللَّهِ", transliteration:"Bismillah.", meaning:"In the name of Allah.", source:"Sunan Abi Dawud 3767; Jami at-Tirmidhi 1859" },
+ { id:"travel", category:"Travel", title:"Travelling supplication", arabic:"سُبْحَانَ الَّذِي سَخَّرَ لَنَا هَذَا وَمَا كُنَّا لَهُ مُقْرِنِينَ", transliteration:"Subhanalladhi sakhkhara lana hadha wa ma kunna lahu muqrinin.", meaning:"Glory is to Him who has subjected this to us, and we could not have done it ourselves.", source:"Quran 43:13" },
+ { id:"good", category:"Quranic", title:"Good in this world and the Hereafter", arabic:"رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ", transliteration:"Rabbana atina fid-dunya hasanatan wa fil-akhirati hasanatan wa qina adhaban-nar.", meaning:"Our Lord, give us good in this world and in the Hereafter, and protect us from the punishment of the Fire.", source:"Quran 2:201" },
+ { id:"morning", category:"Morning", title:"Morning remembrance", arabic:"اللَّهُمَّ بِكَ أَصْبَحْنَا وَبِكَ أَمْسَيْنَا وَبِكَ نَحْيَا وَبِكَ نَمُوتُ وَإِلَيْكَ النُّشُورُ", transliteration:"Allahumma bika asbahna wa bika amsayna wa bika nahya wa bika namut wa ilaykan-nushur.", meaning:"O Allah, by You we enter the morning and by You we enter the evening; by You we live and by You we die, and to You is the resurrection.", source:"Jami at-Tirmidhi 3391" },
+ { id:"protection", category:"Protection", title:"Seeking protection", arabic:"أَعُوذُ بِكَلِمَاتِ اللَّهِ التَّامَّاتِ مِنْ شَرِّ مَا خَلَقَ", transliteration:"A'udhu bi kalimatillahi at-tammati min sharri ma khalaq.", meaning:"I seek refuge in the perfect words of Allah from the evil of what He created.", source:"Sahih Muslim 2708" },
+];
+
+export default function DuasExplorer(){
+ const [query,setQuery]=useState(""); const [category,setCategory]=useState("All"); const [saved,setSaved]=useState<string[]>(()=>JSON.parse(localStorage.getItem("muslim-guide-duas")||"[]"));
+ const categories=["All",...Array.from(new Set(DUAS.map(d=>d.category)))];
+ const items=useMemo(()=>DUAS.filter(d=>(category==="All"||d.category===category)&&(`${d.title} ${d.arabic} ${d.transliteration} ${d.meaning}`.toLowerCase().includes(query.toLowerCase()))),[query,category]);
+ const toggle=(id:string)=>setSaved(v=>{const n=v.includes(id)?v.filter(x=>x!==id):[...v,id];localStorage.setItem("muslim-guide-duas",JSON.stringify(n));return n});
+ const copy=(d:Dua)=>navigator.clipboard?.writeText(`${d.arabic}\n\n${d.transliteration}\n\n${d.meaning}\n\nSource: ${d.source}`);
+ return <div className="tool-page"><div className="hadith-controls"><select value={category} onChange={e=>setCategory(e.target.value)}>{categories.map(c=><option key={c}>{c}</option>)}</select><div className="hadith-search"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search duas & azkar"/></div></div>{items.map(d=><article className="content-card" key={d.id}><div className="hadith-card-top"><span>{d.category}</span><div className="hadith-actions"><button onClick={()=>toggle(d.id)} aria-label="Bookmark">{saved.includes(d.id)?<BookmarkCheck size={18}/>:<Bookmark size={18}/>}</button><button onClick={()=>copy(d)} aria-label="Copy"><Copy size={18}/></button><button onClick={()=>navigator.share?.({title:d.title,text:`${d.arabic}\n${d.meaning}\n${d.source}`})} aria-label="Share"><Share2 size={18}/></button></div></div><strong>{d.title}</strong><p className="arabic-tool">{d.arabic}</p><p><b>{d.transliteration}</b></p><p>{d.meaning}</p><small>Reference: {d.source}</small></article>)}{!items.length&&<div className="tool-note">No duas found.</div>}</div>;
+}
