@@ -24,518 +24,160 @@
   --mg-shadow: 0 10px 30px rgba(0,0,0,.28);
 }
 
-html, body, #root {
-  width: 100%;
-  min-width: 320px;
-  min-height: 100%;
-  overflow-x: hidden;
-}
-
-html {
-  background: var(--mg-bg);
-  color-scheme: light;
-}
-
-html[data-resolved-theme="dark"] {
-  color-scheme: dark;
-}
-
+html, body, #root { width:100%; min-width:320px; min-height:100%; overflow-x:hidden; }
+html { background:var(--mg-bg); color:var(--mg-text); color-scheme:light; }
+html[data-resolved-theme="dark"] { color-scheme:dark; }
 html[data-resolved-theme="dark"],
 html[data-resolved-theme="dark"] body,
 html[data-resolved-theme="dark"] .app,
-html[data-resolved-theme="dark"] .app-shell {
-  background: var(--mg-bg) !important;
-  color: var(--mg-text) !important;
-}
+html[data-resolved-theme="dark"] .app-shell { background:var(--mg-bg)!important; color:var(--mg-text)!important; }
 
-html[data-resolved-theme="dark"] h1,
-html[data-resolved-theme="dark"] h2,
-html[data-resolved-theme="dark"] h3,
-html[data-resolved-theme="dark"] h4,
-html[data-resolved-theme="dark"] strong,
-html[data-resolved-theme="dark"] p,
-html[data-resolved-theme="dark"] label {
-  color: inherit;
-}
+/* Global theme: existing app components inherit these semantic colors. */
+body, button, input, select, textarea { color:var(--mg-text); }
+.app, .app-shell, .page, .home-page, .quran-page, .quran-reader-page, .more-page, .placeholder-page { color:var(--mg-text); }
+h1,h2,h3,h4,strong { color:var(--mg-text); }
+p, small, span { color:inherit; }
 
-html[data-resolved-theme="dark"] input,
-html[data-resolved-theme="dark"] select,
-html[data-resolved-theme="dark"] textarea {
-  background: var(--mg-surface-2) !important;
-  color: var(--mg-text) !important;
-  border-color: var(--mg-border) !important;
-}
+.app-shell { width:100%!important; max-width:760px!important; margin:0 auto!important; padding:16px 16px calc(126px + env(safe-area-inset-bottom))!important; }
 
-/* Global mobile rhythm: every screen stays inside the same card/grid system. */
-.app-shell {
-  width: 100% !important;
-  max-width: 760px !important;
-  margin: 0 auto !important;
-  padding: 16px 16px calc(116px + env(safe-area-inset-bottom)) !important;
-}
-
-.card,
+/* Unified premium card language. */
 .date-row,
+.prayer-card,
+.prayer-list,
+.quick-grid > button,
+.masjid-card,
+.reminder-card,
 .continue-reading,
 .prayer-location-card,
 .next-prayer-card,
 .prayer-list-card,
 .special-time-card,
-.reminder-card,
-.prayer-settings-card,
-.masjid-card,
 .masjid-placeholder-card,
+.prayer-settings-card,
 .more-list,
 .more-item,
 .surah-item,
 .quran-search,
-.quick-card,
-.placeholder-page {
-  border-radius: var(--mg-radius-lg) !important;
-  border-color: var(--mg-border) !important;
-  box-shadow: var(--mg-shadow) !important;
-}
-
-/* Prevent long Arabic/translation strings from breaking mobile cards. */
-.card *,
-.prayer-page *,
-.more-page *,
-.quran-page *,
-.surah-item *,
-.next-prayer-card * {
-  min-width: 0;
-  max-width: 100%;
-}
-
-button,
-a,
-input,
-select,
-textarea {
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-
-button {
-  max-width: 100%;
-}
-
-.icon-button,
-.secondary-button,
-.primary-button,
-.toggle-button,
-.android-theme-pill,
-.android-primary-pill,
-.android-close-button,
-.android-segmented-control button {
-  min-height: 44px;
-  border-radius: var(--mg-radius-pill) !important;
-}
-
-.icon-button,
-.secondary-button,
-.primary-button,
-.toggle-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 0 14px;
-}
-
-.android-ui-toolbar {
-  position: fixed;
-  top: max(10px, env(safe-area-inset-top));
-  right: max(10px, env(safe-area-inset-right));
-  z-index: 900;
-  pointer-events: none;
-}
-
-.android-theme-pill {
-  pointer-events: auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 0 15px;
-  background: var(--mg-surface);
-  color: var(--mg-text);
-  border: 1px solid var(--mg-border);
-  box-shadow: var(--mg-shadow);
-  backdrop-filter: blur(18px);
-  font-weight: 700;
-}
-
-/* All main cards use one consistent internal spacing. */
-.prayer-location-card,
-.next-prayer-card,
-.prayer-list-card,
-.special-time-card,
-.masjid-card,
-.masjid-placeholder-card,
-.reminder-card,
-.prayer-settings-card,
-.date-row,
-.continue-reading {
-  width: 100%;
-  overflow: hidden;
-}
-
-.next-prayer-card,
-.prayer-location-card {
-  gap: 12px;
-}
-
-.next-prayer-card > *,
-.prayer-location-card > *,
-.prayer-location-main,
-.prayer-top,
-.location-row {
-  min-width: 0;
-}
-
-.next-prayer-time {
-  flex: 0 0 auto;
-}
-
-/* Quran: make each Surah/reading unit a proper mobile card. */
-.quran-page,
-.quran-reader,
-.quran-content,
-.surah-list,
-.quran-list {
-  width: 100%;
-  max-width: 100%;
-}
-
-.surah-item {
-  width: 100% !important;
-  min-height: 72px;
-  padding: 14px !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important;
-  overflow: hidden;
-  background: var(--mg-surface) !important;
-}
-
-.surah-item > * {
-  min-width: 0;
-}
-
-.surah-item p,
-.surah-item span,
-.surah-item strong {
-  overflow-wrap: anywhere;
-}
-
-.quran-search {
-  width: 100%;
-  min-height: 48px;
-  padding: 0 14px !important;
-  overflow: hidden;
-}
-
-/* Prayer cards on narrow screens: never squeeze the time column. */
-.prayer-page .page-header {
-  gap: 10px;
-}
-
-.prayer-page .page-header h1 {
-  font-size: clamp(24px, 7vw, 32px);
-  overflow-wrap: anywhere;
-}
-
-.prayer-location-main {
-  flex: 1 1 auto;
-}
-
-.secondary-button {
-  flex: 0 0 auto;
-  white-space: nowrap;
-}
-
-/* One UI-inspired segmented/pill controls. */
-.android-segmented-control {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5px;
-  padding: 5px;
-  margin-bottom: 16px;
-  border-radius: var(--mg-radius-pill);
-  background: var(--mg-surface-2);
-}
-
-.android-segmented-control button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  background: transparent;
-  color: var(--mg-muted);
-  font-weight: 800;
-}
-
-.android-segmented-control button.selected {
-  background: var(--mg-surface);
-  color: var(--mg-accent);
-  box-shadow: 0 4px 14px rgba(0,0,0,.08);
-}
-
-.android-primary-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 140px;
-  padding: 0 22px;
-  background: var(--mg-accent);
-  color: #fff;
-  font-weight: 800;
-  box-shadow: 0 7px 18px rgba(8,127,91,.20);
-}
-
-/* The bottom navigation is ALWAYS a floating pill on mobile. */
-.bottom-nav {
-  position: fixed !important;
-  z-index: 1000 !important;
-  left: 50% !important;
-  right: auto !important;
-  bottom: max(10px, env(safe-area-inset-bottom)) !important;
-  transform: translateX(-50%) !important;
-  width: calc(100% - 20px) !important;
-  max-width: 700px !important;
-  min-height: 68px !important;
-  margin: 0 !important;
-  padding: 7px !important;
-  display: grid !important;
-  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-  gap: 3px !important;
-  overflow: hidden !important;
-  border-radius: 28px !important;
-  border: 1px solid var(--mg-border) !important;
-  background: color-mix(in srgb, var(--mg-surface) 94%, transparent) !important;
-  box-shadow: 0 16px 38px rgba(0,0,0,.16) !important;
-  backdrop-filter: blur(24px) saturate(1.25);
-  -webkit-backdrop-filter: blur(24px) saturate(1.25);
-}
-
-.bottom-nav button,
-.bottom-nav .nav-item {
-  width: 100% !important;
-  min-width: 0 !important;
-  min-height: 54px !important;
-  padding: 5px 2px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 3px !important;
-  border-radius: 21px !important;
-  overflow: hidden;
-  background: transparent;
-  white-space: nowrap;
-}
-
-.bottom-nav button span,
-.bottom-nav .nav-item span {
-  display: block !important;
-  width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: center;
-  font-size: 9px !important;
-  line-height: 1.1;
-  font-weight: 750;
-}
-
-.bottom-nav button.active,
-.bottom-nav .nav-item.active {
-  background: var(--mg-surface-2) !important;
-  color: var(--mg-accent) !important;
-}
-
-/* Quran & Hadith sheet */
-.quran-hadith-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1200;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 0;
-  background: rgba(0,0,0,.40);
-  backdrop-filter: blur(8px);
-}
-
-.quran-hadith-sheet {
-  width: min(760px, 100%);
-  max-height: 94dvh;
-  overflow: auto;
-  overscroll-behavior: contain;
-  background: var(--mg-bg);
-  color: var(--mg-text);
-  border-radius: 30px 30px 0 0;
-  padding: 18px 16px calc(24px + env(safe-area-inset-bottom));
-  box-shadow: 0 -12px 50px rgba(0,0,0,.24);
-}
-
-.quran-hadith-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.quran-hadith-header h2 {
-  margin: 3px 0 0;
-  color: var(--mg-text);
-  font-size: clamp(23px, 7vw, 32px);
-  letter-spacing: -.7px;
-}
-
-.android-eyebrow {
-  color: var(--mg-accent);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: .12em;
-}
-
-.android-close-button {
-  width: 44px;
-  padding: 0;
-  display: grid;
-  place-items: center;
-  background: var(--mg-surface-2);
-  color: var(--mg-text);
-  flex: 0 0 auto;
-}
-
+.ayah-card,
 .android-library-card {
-  width: 100%;
-  padding: 24px 18px;
-  text-align: center;
-  background: var(--mg-surface);
-  border: 1px solid var(--mg-border);
-  border-radius: var(--mg-radius-xl);
-  box-shadow: var(--mg-shadow);
+  border:1px solid var(--mg-border)!important;
+  box-shadow:var(--mg-shadow)!important;
 }
 
-.android-library-card p {
-  margin: 0 auto 18px;
-  max-width: 520px;
-  color: var(--mg-muted);
-  line-height: 1.55;
+/* Home header/date. */
+.top-header { color:var(--mg-text); }
+.eyebrow, .small-label { color:var(--mg-muted)!important; }
+.date-row { background:var(--mg-surface)!important; color:var(--mg-muted)!important; border-radius:var(--mg-radius-lg)!important; }
+.date-row strong { color:var(--mg-text)!important; }
+
+/* Samsung Health-inspired prayer dashboard: calm hero + compact metric rows. */
+.home-page .prayer-card {
+  position:relative;
+  padding:20px!important;
+  border-radius:30px!important;
+  overflow:hidden;
+  color:#fff!important;
+  background:linear-gradient(145deg,#087f5b,#075c48)!important;
+  box-shadow:0 18px 42px rgba(4,100,70,.20)!important;
+}
+.home-page .prayer-card::after {
+  content:"";
+  position:absolute;
+  width:150px;height:150px;
+  right:-55px;top:-60px;
+  border-radius:50%;
+  background:rgba(255,255,255,.10);
+}
+.home-page .prayer-card * { color:#fff!important; }
+.home-page .prayer-card-top { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; position:relative; z-index:1; }
+.home-page .prayer-card-top > div:first-child { min-width:0; }
+.home-page .prayer-card h2 { margin:2px 0 4px!important; font-size:28px!important; letter-spacing:-.6px; }
+.home-page .prayer-card p { margin:0; opacity:.72; font-size:12px; }
+.home-page .prayer-time { flex:0 0 auto; display:flex; align-items:baseline; gap:4px; margin:0!important; font-size:42px!important; line-height:1!important; letter-spacing:-2px; }
+.home-page .prayer-time strong { font-size:inherit; }
+.home-page .prayer-time span { font-size:14px!important; letter-spacing:0; opacity:.8; }
+.home-page .countdown { position:relative; z-index:1; margin-top:20px; padding-top:13px; border-top:1px solid rgba(255,255,255,.16); display:flex; justify-content:space-between; font-size:12px; }
+
+/* Prayer time list as compact Health-style metrics. */
+.home-page .section { margin-top:18px; }
+.home-page .section-title-row { margin:0 2px 9px; }
+.home-page .section-title-row h2 { color:var(--mg-text)!important; font-size:17px!important; letter-spacing:-.25px; }
+.home-page .section-title-row button { color:var(--mg-accent)!important; }
+.home-page .prayer-list { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); overflow:hidden; background:var(--mg-surface)!important; border-radius:22px!important; }
+.home-page .prayer-row { min-width:0; min-height:82px; padding:11px 6px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; border-right:1px solid var(--mg-border); }
+.home-page .prayer-row:last-child { border-right:0; }
+.home-page .prayer-row span { color:var(--mg-muted)!important; font-size:10px; font-weight:700; }
+.home-page .prayer-row strong { color:var(--mg-text)!important; font-size:12px; white-space:nowrap; }
+
+/* Quick access: small premium tiles. */
+.home-page .quick-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.home-page .quick-grid > button { min-width:0; min-height:72px!important; padding:9px 5px!important; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; border-radius:17px!important; background:var(--mg-surface)!important; color:var(--mg-text)!important; }
+.home-page .quick-grid > button svg { width:20px; height:20px; color:var(--mg-accent)!important; }
+.home-page .quick-grid > button span { color:var(--mg-text)!important; font-size:10px; font-weight:750; }
+.home-page .quick-grid > button:active { transform:scale(.98); }
+
+/* Dynamic daily reminder is promoted above Quick Access. */
+.home-page .reminder-card {
+  width:100%; margin:16px 0 0!important; padding:14px!important; display:flex; align-items:flex-start; gap:11px; border-radius:20px!important; background:var(--mg-surface)!important; color:var(--mg-text)!important;
+}
+.dynamic-reminder-icon { width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;border-radius:14px;background:var(--mg-surface-2);color:var(--mg-accent)!important;font-size:18px;font-weight:800; }
+.dynamic-reminder-content { min-width:0; flex:1; }
+.dynamic-reminder-meta { display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px; }
+.dynamic-reminder-meta span { color:var(--mg-accent)!important;font-size:9px;font-weight:850;letter-spacing:.11em; }
+.dynamic-reminder-content p { margin:0 0 6px!important;color:var(--mg-text)!important;font-size:12px!important;line-height:1.5!important; }
+.dynamic-reminder-content strong { color:var(--mg-muted)!important;font-size:10px; }
+
+/* Masjid card stays compact and theme-aware. */
+.home-page .masjid-card { margin-top:14px!important; padding:14px!important; background:var(--mg-surface)!important; color:var(--mg-text)!important; }
+.home-page .masjid-card h3 { color:var(--mg-text)!important; }
+.home-page .masjid-card p { color:var(--mg-muted)!important; }
+
+/* iOS-like dynamic theme control. */
+.android-ui-toolbar { position:fixed; top:max(9px,env(safe-area-inset-top)); right:max(9px,env(safe-area-inset-right)); z-index:900; pointer-events:none; }
+.android-theme-pill { pointer-events:auto; min-height:40px!important; padding:0 13px!important; display:inline-flex;align-items:center;justify-content:center;gap:6px; border-radius:999px!important; border:1px solid var(--mg-border)!important; background:color-mix(in srgb,var(--mg-surface) 88%,transparent)!important; color:var(--mg-text)!important; box-shadow:0 8px 24px rgba(0,0,0,.10)!important; backdrop-filter:blur(22px) saturate(1.35);-webkit-backdrop-filter:blur(22px) saturate(1.35); font-weight:750; }
+
+/* Floating bottom pill. */
+.bottom-nav { position:fixed!important; z-index:1000!important; left:50%!important; right:auto!important; bottom:max(10px,env(safe-area-inset-bottom))!important; transform:translateX(-50%)!important; width:calc(100% - 20px)!important; max-width:700px!important; min-height:68px!important; padding:7px!important; display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;overflow:hidden;border-radius:28px!important;border:1px solid var(--mg-border)!important;background:color-mix(in srgb,var(--mg-surface) 94%,transparent)!important;box-shadow:0 16px 38px rgba(0,0,0,.16)!important;backdrop-filter:blur(24px) saturate(1.25);-webkit-backdrop-filter:blur(24px) saturate(1.25); }
+.bottom-nav button { width:100%!important;min-width:0!important;min-height:54px!important;padding:5px 2px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important;border-radius:21px!important;background:transparent!important;color:var(--mg-muted)!important; }
+.bottom-nav button span { display:block!important;width:100%;overflow:hidden;text-overflow:ellipsis;text-align:center;font-size:9px!important;line-height:1.1;font-weight:750;color:inherit!important; }
+.bottom-nav button.active { background:var(--mg-surface-2)!important;color:var(--mg-accent)!important; }
+
+/* Quran/other cards inherit the same theme and spacing. */
+.quran-search,.continue-reading,.surah-item,.ayah-card,.more-list,.more-item { background:var(--mg-surface)!important; color:var(--mg-text)!important; }
+.surah-item span,.surah-item strong,.surah-info strong { color:var(--mg-text)!important; }
+.surah-item .surah-info span { color:var(--mg-muted)!important; }
+.quran-search input { background:transparent!important;color:var(--mg-text)!important; }
+
+.android-segmented-control { display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;margin-bottom:16px;border-radius:999px;background:var(--mg-surface-2); }
+.android-segmented-control button { min-height:44px;border-radius:999px!important;background:transparent;color:var(--mg-muted);font-weight:800; }
+.android-segmented-control button.selected { background:var(--mg-surface);color:var(--mg-accent);box-shadow:0 4px 14px rgba(0,0,0,.08); }
+.android-primary-pill { min-height:44px;min-width:140px;padding:0 22px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px!important;background:var(--mg-accent);color:#fff!important;font-weight:800; }
+
+.quran-hadith-overlay { position:fixed;inset:0;z-index:1200;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.40);backdrop-filter:blur(8px); }
+.quran-hadith-sheet { width:min(760px,100%);max-height:94dvh;overflow:auto;overscroll-behavior:contain;background:var(--mg-bg);color:var(--mg-text);border-radius:30px 30px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom));box-shadow:0 -12px 50px rgba(0,0,0,.24); }
+.quran-hadith-header { display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px; }
+.quran-hadith-header h2 { margin:3px 0 0;color:var(--mg-text);font-size:clamp(23px,7vw,32px);letter-spacing:-.7px; }
+.android-eyebrow { color:var(--mg-accent);font-size:10px;font-weight:800;letter-spacing:.12em; }
+.android-close-button { width:44px;min-height:44px;padding:0;display:grid;place-items:center;background:var(--mg-surface-2);color:var(--mg-text);border-radius:999px!important;flex:0 0 auto; }
+.android-library-card { width:100%;padding:24px 18px;text-align:center;background:var(--mg-surface);border-radius:var(--mg-radius-xl); }
+.android-library-card p { margin:0 auto 18px;max-width:520px;color:var(--mg-muted);line-height:1.55; }
+.android-hadith-wrap { width:100%;min-width:0; }
+.android-hadith-wrap .tool-page { padding:0!important;width:100%;max-width:100%; }
+
+@media(max-width:600px){
+  .app-shell{padding:12px 12px calc(124px + env(safe-area-inset-bottom))!important;}
+  .top-header h1{font-size:25px!important;letter-spacing:-.6px;}
+  .home-page .prayer-card{padding:18px!important;border-radius:27px!important;}
+  .home-page .prayer-time{font-size:clamp(34px,12vw,42px)!important;}
+  .home-page .prayer-row{min-height:76px;padding:9px 3px;}
+  .home-page .prayer-row span{font-size:9px;}
+  .home-page .prayer-row strong{font-size:11px;}
+  .home-page .quick-grid{gap:7px;}
+  .home-page .quick-grid > button{min-height:68px!important;border-radius:16px!important;}
+  .android-theme-pill{width:42px;padding:0!important;}
+  .android-theme-pill span{display:none;}
 }
 
-.android-hadith-wrap {
-  width: 100%;
-  min-width: 0;
-}
-
-.android-hadith-wrap .tool-page {
-  padding: 0 !important;
-  width: 100%;
-  max-width: 100%;
-}
-
-@media (max-width: 600px) {
-  .app-shell {
-    padding: 12px 12px calc(116px + env(safe-area-inset-bottom)) !important;
-  }
-
-  .header {
-    margin-bottom: 16px;
-  }
-
-  .header h1 {
-    font-size: 24px;
-  }
-
-  .prayer-card {
-    padding: 18px !important;
-    border-radius: 26px !important;
-  }
-
-  .prayer-time {
-    font-size: clamp(42px, 14vw, 53px) !important;
-  }
-
-  .quick-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 8px !important;
-  }
-
-  .quick-card {
-    min-height: 84px !important;
-    padding: 10px 5px !important;
-    border-radius: 18px !important;
-  }
-
-  .next-prayer-card {
-    padding: 18px !important;
-  }
-
-  .next-prayer-card h2 {
-    font-size: 23px;
-  }
-
-  .next-prayer-time strong {
-    font-size: 23px;
-  }
-
-  .prayer-location-card {
-    padding: 12px !important;
-  }
-
-  .prayer-list-card,
-  .special-time-card,
-  .reminder-card,
-  .prayer-settings-card,
-  .masjid-card,
-  .masjid-placeholder-card {
-    padding: 14px !important;
-  }
-
-  .secondary-button {
-    padding: 0 12px;
-    font-size: 12px;
-  }
-
-  .android-ui-toolbar {
-    top: max(8px, env(safe-area-inset-top));
-    right: 8px;
-  }
-
-  .android-theme-pill {
-    width: 44px;
-    padding: 0;
-  }
-
-  .android-theme-pill span {
-    display: none;
-  }
-}
-
-@media (min-width: 700px) {
-  .app-shell {
-    padding: 30px 18px 116px !important;
-  }
-
-  .bottom-nav {
-    width: min(calc(100% - 32px), 700px) !important;
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .quran-hadith-sheet,
-  .android-theme-pill,
-  .bottom-nav {
-    animation: mg-soft-enter .18s ease-out;
-  }
-}
-
-@keyframes mg-soft-enter {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+@media(min-width:700px){.app-shell{padding:30px 18px 126px!important;}.bottom-nav{width:min(calc(100% - 32px),700px)!important;}}
+@media(prefers-reduced-motion:no-preference){.bottom-nav,.android-theme-pill,.quran-hadith-sheet{animation:mg-soft-enter .18s ease-out;}}
+@keyframes mg-soft-enter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
