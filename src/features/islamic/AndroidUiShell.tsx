@@ -6,6 +6,8 @@ import "./android-ui.css";
 type LibraryTab = "quran" | "hadith";
 type Theme = "system" | "light" | "dark";
 
+type NavPage = "home" | "quran" | "prayer" | "ai" | "more";
+
 function getInitialTheme(): Theme {
   const saved = localStorage.getItem("muslim-guide-theme");
   return saved === "light" || saved === "dark" || saved === "system" ? saved : "system";
@@ -34,19 +36,22 @@ function syncStatusBar(resolved: "light" | "dark") {
     document.head.appendChild(colorScheme);
   }
   colorScheme.content = dark ? "dark" : "light";
+}
 
-  // Capacitor Android reads these CSS/HTML signals for the WebView surface.
-  // The native layer is also updated when available, without making web builds depend on it.
-  const nativeWindow = window as Window & {
-    Capacitor?: { Plugins?: { StatusBar?: { setStyle?: (options: { style: string }) => Promise<unknown> | unknown; setBackgroundColor?: (options: { color: string }) => Promise<unknown> | unknown } } };
-  };
-  const statusBar = nativeWindow.Capacitor?.Plugins?.StatusBar;
-  if (statusBar?.setStyle) {
-    void statusBar.setStyle({ style: dark ? "DARK" : "LIGHT" });
-  }
-  if (statusBar?.setBackgroundColor) {
-    void statusBar.setBackgroundColor({ color: background });
-  }
+function navPageFromButton(button: HTMLButtonElement): NavPage | null {
+  const label = button.textContent?.trim().toLowerCase() || "";
+  if (label.includes("home")) return "home";
+  if (label.includes("quran")) return "quran";
+  if (label.includes("prayer")) return "prayer";
+  if (label === "ai" || label.includes(" ai")) return "ai";
+  if (label.includes("more")) return "more";
+  return null;
+}
+
+function clickNavPage(page: NavPage) {
+  const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>(".bottom-nav button"));
+  const target = buttons.find((button) => navPageFromButton(button) === page);
+  target?.click();
 }
 
 export default function AndroidUiShell() {
@@ -69,6 +74,49 @@ export default function AndroidUiShell() {
     return () => media.removeEventListener?.("change", apply);
   }, [theme]);
 
+  // Keep React's page state and the browser/Android history stack in sync.
+  // Android edge-back gestures and the system back button both surface as popstate.
+  useEffect(() => {
+    const stateKey = "muslim-guide-page";
+    let syncing = false;
+
+    const currentPage = (): NavPage => {
+      const active = document.querySelector<HTMLButtonElement>(".bottom-nav button.active");
+      return active ? (navPageFromButton(active) || "home") : "home";
+    };
+
+    if (!(history.state && history.state[stateKey])) {
+      history.replaceState({ ...(history.state || {}), [stateKey]: currentPage() }, "", location.href);
+    }
+
+    const onClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      const button = target?.closest<HTMLButtonElement>(".bottom-nav button");
+      if (!button) return;
+      const page = navPageFromButton(button);
+      if (!page || syncing) return;
+      const previous = history.state?.[stateKey];
+      if (previous === page) return;
+      history.pushState({ ...(history.state || {}), [stateKey]: page }, "", location.href);
+    };
+
+    const onPopState = () => {
+      const page = (history.state?.[stateKey] as NavPage | undefined) || "home";
+      syncing = true;
+      window.setTimeout(() => {
+        clickNavPage(page);
+        syncing = false;
+      }, 0);
+    };
+
+    document.addEventListener("click", onClick, true);
+    window.addEventListener("popstate", onPopState);
+    return () => {
+      document.removeEventListener("click", onClick, true);
+      window.removeEventListener("popstate", onPopState);
+    };
+  }, []);
+
   useEffect(() => {
     const openTool = (tool: string) => {
       window.dispatchEvent(new CustomEvent("muslim-guide:open-tool", { detail: tool }));
@@ -79,9 +127,7 @@ export default function AndroidUiShell() {
       if (!button) return;
       const label = button.textContent?.trim().toLowerCase() || "";
       if (label.includes("quran")) {
-        const quran = Array.from(document.querySelectorAll<HTMLButtonElement>(".bottom-nav button"))
-          .find((b) => b.querySelector("span")?.textContent?.trim().toLowerCase().includes("quran"));
-        if (quran) quran.click();
+        clickNavPage("quran");
         return;
       }
       const map: Record<string, string> = { hadith: "hadith", duas: "duas", qibla: "qibla", tasbeeh: "tasbeeh", calendar: "calendar", ramadan: "ramadan" };
@@ -91,6 +137,8 @@ export default function AndroidUiShell() {
     document.addEventListener("click", quickAccess, true);
     return () => document.removeEventListener("click", quickAccess, true);
   }, []);
+
+  const openTool = (tool: string) => window.dispatchEvent(new CustomEvent("muslim-guide:open-tool", { detail: tool }));
 
   useEffect(() => {
     const installToolsButton = () => {
@@ -113,12 +161,9 @@ export default function AndroidUiShell() {
     return () => observer.disconnect();
   }, []);
 
-  const openTool = (tool: string) => window.dispatchEvent(new CustomEvent("muslim-guide:open-tool", { detail: tool }));
   const openQuran = () => {
     setLibraryOpen(false);
-    const quranButton = Array.from(document.querySelectorAll<HTMLButtonElement>(".bottom-nav button"))
-      .find((button) => button.querySelector("span")?.textContent?.toLowerCase().includes("quran"));
-    quranButton?.click();
+    clickNavPage("quran");
   };
   const closeLibrary = () => setLibraryOpen(false);
 
