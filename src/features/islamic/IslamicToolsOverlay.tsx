@@ -2,75 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { Bell, CalendarDays, Check, ChevronLeft, CircleDot, Compass, Heart, Moon, WifiOff, X } from "lucide-react";
 import QiblaFinder from "../qibla/QiblaFinder";
 import HadithExplorer from "./HadithExplorer";
+import DuasExplorer from "./DuasExplorer";
 import "./islamic-tools.css";
 
-type Tool = "hub" | "qibla" | "ramadan" | "calendar" | "duas" | "hadith" | "tasbeeh" | "notifications";
-
-const duas = [
-  ["Morning remembrance", "SubhanAllahi wa bihamdihi, SubhanAllahil Azim.", "سُبْحَانَ اللَّهِ وَبِحَمْدِهِ، سُبْحَانَ اللَّهِ الْعَظِيمِ"],
-  ["Before sleeping", "Bismika Allahumma amutu wa ahya.", "بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا"],
-  ["For forgiveness", "Rabbighfir li wa tub alayya, innaka antat-Tawwabur-Rahim.", "رَبِّ اغْفِرْ لِي وَتُبْ عَلَيَّ إِنَّكَ أَنْتَ التَّوَّابُ الرَّحِيمُ"],
-  ["Ease and goodness", "Rabbana atina fid-dunya hasanatan wa fil-akhirati hasanatan.", "رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً"],
-];
-
-function getHijriParts(date: Date) {
-  try {
-    const parts = new Intl.DateTimeFormat("en-IN-u-ca-islamic-umalqura", { day: "numeric", month: "long", year: "numeric" }).formatToParts(date);
-    return { day: parts.find(p => p.type === "day")?.value ?? "", month: parts.find(p => p.type === "month")?.value ?? "", year: parts.find(p => p.type === "year")?.value ?? "" };
-  } catch { return { day: "", month: "", year: "" }; }
-}
-
-function IslamicCalendar() {
-  const [offset, setOffset] = useState(0);
-  const base = new Date();
-  base.setDate(base.getDate() + offset * 30);
-  const hijri = getHijriParts(base);
-  const monthDays = Array.from({ length: 30 }, (_, i) => {
-    const d = new Date(base); d.setDate(d.getDate() + i);
-    return { d, h: getHijriParts(d) };
-  });
-  return <div className="tool-page"><div className="tool-title"><button onClick={() => setOffset(v => v - 1)} aria-label="Previous month">‹</button><div><span>ISLAMIC CALENDAR</span><h2>{hijri.month} {hijri.year}</h2></div><button onClick={() => setOffset(v => v + 1)} aria-label="Next month">›</button></div><div className="calendar-grid">{monthDays.map(({ d, h }) => <div className="calendar-day" key={d.toISOString()}><strong>{h.day}</strong><span>{d.toLocaleDateString("en-IN", { weekday: "short" })}</span><small>{d.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</small></div>)}</div></div>;
-}
-
-function Ramadan() {
-  const days = Array.from({ length: 30 }, (_, i) => i + 1);
-  return <div className="tool-page"><div className="tool-hero"><Moon /><div><span>RAMADAN PLANNER</span><h2>30-Day Fasting Calendar</h2><p>Use your local prayer timetable for the final fasting times.</p></div></div><div className="ramadan-table"><div className="ramadan-head"><b>Day</b><b>Sehri</b><b>Iftar</b><b>Status</b></div>{days.map(day => <div className="ramadan-row" key={day}><strong>{day}</strong><span>--:--</span><span>--:--</span><span>{day <= 1 ? "Today" : "Upcoming"}</span></div>)}</div></div>;
-}
-
-function Tasbeeh() {
-  const [count, setCount] = useState(0);
-  const [goal, setGoal] = useState(33);
-  return <div className="tool-page centered-tool"><CircleDot size={38}/><span>TASBEEH</span><h2>{count}</h2><p>Goal: {goal}</p><button className="tasbeeh-button" onClick={() => setCount(v => v + 1)}>{count === goal ? "Completed ✓" : "Tap to count"}</button><div className="tasbeeh-actions"><button onClick={() => setCount(0)}>Reset</button><button onClick={() => setGoal(goal === 33 ? 99 : 33)}>Goal: {goal === 33 ? "99" : "33"}</button></div></div>;
-}
-
-function Notifications() {
-  const [enabled, setEnabled] = useState(false);
-  const [status, setStatus] = useState("");
-  const enable = async () => {
-    if (!("Notification" in window)) { setStatus("Notifications are not supported in this browser."); return; }
-    const permission = await Notification.requestPermission();
-    const ok = permission === "granted";
-    setEnabled(ok); setStatus(ok ? "Prayer notification permission enabled." : "Permission was not granted.");
-    if (ok) new Notification("Muslim Guide", { body: "Prayer reminders are enabled. Native background scheduling will be added with Android packaging." });
-  };
-  return <div className="tool-page"><div className="tool-hero"><Bell /><div><span>NOTIFICATIONS</span><h2>Prayer Reminders</h2><p>Browser permission foundation is ready. Android background scheduling will use native notifications.</p></div></div><button className="primary-tool-button" onClick={enable}>{enabled ? <><Check size={18}/> Enabled</> : "Enable notifications"}</button>{status && <div className="tool-note">{status}</div>}</div>;
-}
-
-export default function IslamicToolsOverlay() {
-  const [open, setOpen] = useState(false);
-  const [tool, setTool] = useState<Tool>("hub");
-  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [offline, setOffline] = useState(!navigator.onLine);
-
-  useEffect(() => { const on = () => setOffline(false), off = () => setOffline(true); window.addEventListener("online", on); window.addEventListener("offline", off); return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); }; }, []);
-  useEffect(() => { if (open && !coords && navigator.geolocation) navigator.geolocation.getCurrentPosition(p => setCoords({ latitude: p.coords.latitude, longitude: p.coords.longitude }), () => undefined, { enableHighAccuracy: true, timeout: 7000 }); }, [open, coords]);
-
-  const today = useMemo(() => { const d = new Date(); return `${d.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })} · ${getHijriParts(d).day} ${getHijriParts(d).month} ${getHijriParts(d).year}`; }, []);
-  if (!open) return <button className="islamic-fab" onClick={() => setOpen(true)} aria-label="Open Islamic tools"><Compass size={20}/><span>Tools</span></button>;
-
-  const go = (next: Tool) => setTool(next);
-  const back = () => setTool("hub");
-  return <div className="islamic-overlay"><div className="islamic-panel"><header><div><span>MUSLIM GUIDE</span><h1>{tool === "hub" ? "Islamic Tools" : ({ qibla: "Qibla Finder", ramadan: "Ramadan", calendar: "Islamic Calendar", duas: "Duas & Azkar", hadith: "Hadith", tasbeeh: "Tasbeeh", notifications: "Notifications" } as Record<string,string>)[tool]}</h1></div><button onClick={() => setOpen(false)}><X/></button></header>{offline && <div className="offline-banner"><WifiOff size={16}/> Offline mode: saved app data remains available where cached.</div>}{tool === "hub" && <><p className="tool-date">{today}</p><div className="tool-cards">{[["qibla","Qibla","Live compass & direction",Compass],["ramadan","Ramadan","30-day fasting planner",Moon],["calendar","Islamic Calendar","Hijri dates",CalendarDays],["duas","Duas & Azkar","Daily supplications",Heart],["hadith","Hadith","Six major collections",BookOpenIcon],["tasbeeh","Tasbeeh","Digital counter",CircleDot],["notifications","Notifications","Prayer reminder permission",Bell]].map(([id,title,sub,Icon]) => { const C = Icon as any; return <button className="tool-card" key={id as string} onClick={() => go(id as Tool)}><C size={22}/><div><strong>{title as string}</strong><span>{sub as string}</span></div><b>›</b></button>; })}</div></>}{tool !== "hub" && <><button className="back-tool" onClick={back}><ChevronLeft size={18}/> All tools</button>{tool === "qibla" && (coords ? <QiblaFinder latitude={coords.latitude} longitude={coords.longitude}/> : <div className="tool-note">Location permission is needed for Qibla direction.</div>)}{tool === "ramadan" && <Ramadan/>}{tool === "calendar" && <IslamicCalendar/>}{tool === "tasbeeh" && <Tasbeeh/>}{tool === "notifications" && <Notifications/>}{tool === "duas" && <div className="tool-page">{duas.map(([title,en,ar]) => <article className="content-card" key={title}><span>{title}</span><p className="arabic-tool">{ar}</p><p>{en}</p></article>)}</div>}{tool === "hadith" && <HadithExplorer/>}</>}</div></div>;
-}
-
-function BookOpenIcon(props: any) { return <span {...props} style={{ fontSize: 22 }}>📖</span>; }
+type Tool="hub"|"qibla"|"ramadan"|"calendar"|"duas"|"hadith"|"tasbeeh"|"notifications";
+function hijri(date:Date){try{const p=new Intl.DateTimeFormat("en-IN-u-ca-islamic-umalqura",{day:"numeric",month:"long",year:"numeric"}).formatToParts(date);return{day:p.find(x=>x.type==="day")?.value||"",month:p.find(x=>x.type==="month")?.value||"",year:p.find(x=>x.type==="year")?.value||""}}catch{return{day:"",month:"",year:""}}}
+function IslamicCalendar(){const[o,setO]=useState(0);const b=new Date();b.setDate(b.getDate()+o*30);const h=hijri(b);return <div className="tool-page"><div className="tool-title"><button onClick={()=>setO(v=>v-1)}>‹</button><div><span>ISLAMIC CALENDAR</span><h2>{h.month} {h.year}</h2></div><button onClick={()=>setO(v=>v+1)}>›</button></div><div className="calendar-grid">{Array.from({length:30},(_,i)=>{const d=new Date(b);d.setDate(d.getDate()+i);const x=hijri(d);return <div className="calendar-day" key={d.toISOString()}><strong>{x.day}</strong><span>{d.toLocaleDateString("en-IN",{weekday:"short"})}</span><small>{d.toLocaleDateString("en-IN",{day:"numeric",month:"short"})}</small></div>})}</div></div>}
+function Ramadan(){return <div className="tool-page"><div className="tool-hero"><Moon/><div><span>RAMADAN PLANNER</span><h2>30-Day Fasting Calendar</h2><p>Sehri ends at Fajr and Iftar begins at Maghrib.</p></div></div><div className="ramadan-table">{Array.from({length:30},(_,i)=><div className="ramadan-row" key={i}><strong>{i+1}</strong><span>--:--</span><span>--:--</span><span>{i===0?"Today":"Upcoming"}</span></div>)}</div></div>}
+function Tasbeeh(){const[c,setC]=useState(0);const[g,setG]=useState(33);return <div className="tool-page centered-tool"><CircleDot size={38}/><span>TASBEEH</span><h2>{c}</h2><p>Goal: {g}</p><button className="tasbeeh-button" onClick={()=>setC(v=>v+1)}>{c===g?"Completed ✓":"Tap to count"}</button><div className="tasbeeh-actions"><button onClick={()=>setC(0)}>Reset</button><button onClick={()=>setG(g===33?99:33)}>Goal: {g===33?99:33}</button></div></div>}
+const PRAYERS=[{key:"fajr",name:"Fajr",hour:5},{key:"dhuhr",name:"Dhuhr",hour:13},{key:"asr",name:"Asr",hour:16},{key:"maghrib",name:"Maghrib",hour:19},{key:"isha",name:"Isha",hour:21}];
+function Notifications(){const[enabled,setEnabled]=useState(()=>localStorage.getItem("mg-notifications")==="1");const[status,setStatus]=useState("");const[times,setTimes]=useState<Record<string,string>>(()=>JSON.parse(localStorage.getItem("mg-prayer-times")||"{}"));const schedule=async()=>{if(!("Notification"in window)){setStatus("Notifications are not supported here.");return}const p=await Notification.requestPermission();if(p!=="granted"){setStatus("Permission was not granted.");return}setEnabled(true);localStorage.setItem("mg-notifications","1");let native=false;try{const{LocalNotifications:L}=await import("@capacitor/local-notifications");const perm=await L.requestPermissions();if(perm.display==="granted"){await L.cancel({notifications:PRAYERS.map((_,i)=>({id:700+i}))});const list=PRAYERS.map((x,i)=>{const v=times[x.key]||`${String(x.hour).padStart(2,"0")}:00`;const[a,b]=v.split(":").map(Number);const at=new Date();at.setHours(a,b,0,0);if(at.getTime()<=Date.now())at.setDate(at.getDate()+1);return{id:700+i,title:`${x.name} Prayer`,body:`It's time for ${x.name} prayer.`,schedule:{at,repeats:true,every:"day" as const}}});await L.schedule({notifications:list});native=true}}catch{native=false}setStatus(native?"Daily native prayer reminders scheduled.":"Browser permission enabled. Native scheduling will activate in the Android app.")};const save=(k:string,v:string)=>setTimes(x=>{const n={...x,[k]:v};localStorage.setItem("mg-prayer-times",JSON.stringify(n));return n});return <div className="tool-page"><div className="tool-hero"><Bell/><div><span>NOTIFICATIONS</span><h2>Prayer Reminders</h2><p>Set daily reminder times. Android uses native scheduled notifications.</p></div></div>{PRAYERS.map(x=><label className="settings-field" key={x.key}><span>{x.name}</span><input type="time" value={times[x.key]||`${String(x.hour).padStart(2,"0")}:00`} onChange={e=>save(x.key,e.target.value)}/></label>)}<button className="primary-tool-button" onClick={schedule}>{enabled?<><Check size={18}/> Schedule / Update reminders</>:"Enable & schedule reminders"}</button>{status&&<div className="tool-note">{status}</div>}</div>}
+export default function IslamicToolsOverlay(){const[open,setOpen]=useState(false);const[tool,setTool]=useState<Tool>("hub");const[coords,setCoords]=useState<{latitude:number;longitude:number}|null>(null);const[offline,setOffline]=useState(!navigator.onLine);useEffect(()=>{const a=()=>setOffline(false),b=()=>setOffline(true);addEventListener("online",a);addEventListener("offline",b);return()=>{removeEventListener("online",a);removeEventListener("offline",b)}},[]);useEffect(()=>{if(open&&!coords&&navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>setCoords({latitude:p.coords.latitude,longitude:p.coords.longitude}),()=>undefined,{enableHighAccuracy:true,timeout:7000})},[open,coords]);const today=useMemo(()=>{const d=new Date(),h=hijri(d);return`${d.toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long"})} · ${h.day} ${h.month} ${h.year}`},[]);if(!open)return <button className="islamic-fab" onClick={()=>setOpen(true)} aria-label="Open Islamic tools"><Compass size={20}/><span>Tools</span></button>;const titles:Record<string,string>={qibla:"Qibla Finder",ramadan:"Ramadan",calendar:"Islamic Calendar",duas:"Duas & Azkar",hadith:"Hadith",tasbeeh:"Tasbeeh",notifications:"Notifications"};return <div className="islamic-overlay"><div className="islamic-panel"><header><div><span>MUSLIM GUIDE</span><h1>{tool==="hub"?"Islamic Tools":titles[tool]}</h1></div><button onClick={()=>setOpen(false)}><X/></button></header>{offline&&<div className="offline-banner"><WifiOff size={16}/> Offline mode: saved app data remains available where cached.</div>}{tool==="hub"?<><p className="tool-date">{today}</p><div className="tool-cards">{[["qibla","Qibla","Live compass & direction",Compass],["ramadan","Ramadan","30-day fasting planner",Moon],["calendar","Islamic Calendar","Hijri dates",CalendarDays],["duas","Duas & Azkar","Authentic references",Heart],["hadith","Hadith","Six major collections",BookOpenIcon],["tasbeeh","Tasbeeh","Digital counter",CircleDot],["notifications","Notifications","Daily prayer reminders",Bell]].map(([id,title,sub,Icon])=>{const C=Icon as any;return <button className="tool-card" key={id as string} onClick={()=>setTool(id as Tool)}><C size={22}/><div><strong>{title as string}</strong><span>{sub as string}</span></div><b>›</b></button>})}</div></>:<><button className="back-tool" onClick={()=>setTool("hub")}><ChevronLeft size={18}/> All tools</button>{tool==="qibla"&&(coords?<QiblaFinder latitude={coords.latitude} longitude={coords.longitude}/>:<div className="tool-note">Location permission is needed for Qibla direction.</div>)}{tool==="ramadan"&&<Ramadan/>}{tool==="calendar"&&<IslamicCalendar/>}{tool==="duas"&&<DuasExplorer/>}{tool==="hadith"&&<HadithExplorer/>}{tool==="tasbeeh"&&<Tasbeeh/>}{tool==="notifications"&&<Notifications/>}</>}</div></div>}
+function BookOpenIcon(props:any){return <span {...props} style={{fontSize:22}}>📖</span>}
