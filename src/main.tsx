@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import IslamicToolsOverlay from './features/islamic/IslamicToolsOverlay';
 import IslamicAI from './features/ai/IslamicAI';
+import AppUpdate from './features/update/AppUpdate';
 import './index.css';
 import './features/quran/indian-quran.css';
 
@@ -11,6 +12,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <App />
     <IslamicToolsOverlay />
     <IslamicAI />
+    <AppUpdate />
   </React.StrictMode>
 );
 
