@@ -398,6 +398,11 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # npm install can rewrite the tracked lockfile in the runner.
+          # Restore it before switching to the distribution branch.
+          git restore --worktree --staged package-lock.json 2>/dev/null || true
+
           git fetch origin apk-updates || true
           if git show-ref --verify --quiet refs/remotes/origin/apk-updates; then
             git switch -C apk-updates origin/apk-updates
