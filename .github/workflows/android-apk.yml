@@ -361,10 +361,40 @@ jobs:
           path: release/*.apk
           retention-days: 30
 
-      - name: Create GitHub Release
+      - name: Publish APK update feed
         env:
-          GH_TOKEN: ${{ github.token }}
           VERSION_NAME: ${{ steps.version.outputs.version_name }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh release create "v${VERSION_NAME}" release/*.apk --title "Muslim Guide ${VERSION_NAME}" --notes "Automatic signed Android build from main." --target "${GITHUB_SHA}"
+          APK_FILE="Muslim-Guide-${VERSION_NAME}.apk"
+          PUBLISH_DIR="${RUNNER_TEMP}/apk-updates"
+          rm -rf "$PUBLISH_DIR"
+          mkdir -p "$PUBLISH_DIR"
+          cp "release/${APK_FILE}" "$PUBLISH_DIR/${APK_FILE}"
+          cat > "$PUBLISH_DIR/latest.json" <<EOF
+          {
+            "version": "${VERSION_NAME}",
+            "name": "Muslim Guide ${VERSION_NAME}",
+            "notes": "Automatic update from the latest main branch build.",
+            "apkUrl": "https://raw.githubusercontent.com/aqiffarooqui-dot/Muslim-Guide/apk-updates/${APK_FILE}"
+          }
+          EOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin apk-updates || true
+
+          if git show-ref --verify --quiet refs/remotes/origin/apk-updates; then
+            git checkout -B apk-updates origin/apk-updates
+            git rm -rf . >/dev/null 2>&1 || true
+          else
+            git checkout --orphan apk-updates
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+
+          cp "$PUBLISH_DIR/${APK_FILE}" "${APK_FILE}"
+          cp "$PUBLISH_DIR/latest.json" latest.json
+          git add "${APK_FILE}" latest.json
+          git commit -m "chore: publish Muslim Guide ${VERSION_NAME} APK" || true
+          git push origin apk-updates --force
