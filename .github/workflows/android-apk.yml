@@ -63,13 +63,10 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-
-          path = Path("android/app/build.gradle")
+          path = Path('android/app/build.gradle')
           text = path.read_text()
-
-          if "compileSdkVersion" not in text and "compileSdk " not in text:
-              text = text.replace("android {", "android {\n    compileSdk 35", 1)
-
+          if 'compileSdk' not in text and 'compileSdkVersion' not in text:
+              text = text.replace('android {', 'android {\n    compileSdk 35', 1)
           path.write_text(text)
           PY
 
@@ -82,79 +79,52 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-
           test -n "$KEYSTORE_B64" || { echo "Missing ANDROID_KEYSTORE_BASE64"; exit 1; }
           test -n "$KEYSTORE_PASSWORD" || { echo "Missing ANDROID_KEYSTORE_PASSWORD"; exit 1; }
           test -n "$KEY_ALIAS" || { echo "Missing ANDROID_KEY_ALIAS"; exit 1; }
           test -n "$KEY_PASSWORD" || { echo "Missing ANDROID_KEY_PASSWORD"; exit 1; }
 
-          KEYSTORE_B64_CLEAN=$(printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]')
-          case $(( ${#KEYSTORE_B64_CLEAN} % 4 )) in
-            0) ;;
-            2) KEYSTORE_B64_CLEAN="${KEYSTORE_B64_CLEAN}==" ;;
-            3) KEYSTORE_B64_CLEAN="${KEYSTORE_B64_CLEAN}=" ;;
-            1) echo "Invalid keystore Base64 length"; exit 1 ;;
-          esac
-
-          KEYSTORE_B64="$KEYSTORE_B64_CLEAN" python3 - <<'PY'
-          import base64
-          import os
-
-          data = base64.b64decode(os.environ["KEYSTORE_B64"], validate=True)
-          if len(data) < 100:
-              raise SystemExit("Decoded keystore is unexpectedly small")
-
-          with open("android/muslim-guide-release.jks", "wb") as handle:
-              handle.write(data)
-          PY
-
+          printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]' | base64 -d > android/muslim-guide-release.jks
+          test -s android/muslim-guide-release.jks
           keytool -list -keystore android/muslim-guide-release.jks -storepass "$KEYSTORE_PASSWORD" >/dev/null
 
-          printf '%s\n' \
-            "storeFile=muslim-guide-release.jks" \
-            "storePassword=$KEYSTORE_PASSWORD" \
-            "keyAlias=$KEY_ALIAS" \
-            "keyPassword=$KEY_PASSWORD" \
-            > android/keystore.properties
+          cat > android/keystore.properties <<EOF
+          storeFile=muslim-guide-release.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
 
           python3 - <<'PY'
           from pathlib import Path
-          import re
-
-          path = Path("android/app/build.gradle")
+          path = Path('android/app/build.gradle')
           text = path.read_text()
 
-          if "keystorePropertiesFile" not in text:
-              signing_block = """
-    def keystorePropertiesFile = rootProject.file('keystore.properties')
-    def keystoreProperties = new Properties()
-    if (keystorePropertiesFile.exists()) {
-        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-    }
+          if 'signingConfigs {' not in text:
+              block = """
+              def keystorePropertiesFile = rootProject.file('keystore.properties')
+              def keystoreProperties = new Properties()
+              keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 
-    signingConfigs {
-        release {
-            if (keystorePropertiesFile.exists()) {
-                storeFile file(keystoreProperties['storeFile'])
-                storePassword keystoreProperties['storePassword']
-                keyAlias keystoreProperties['keyAlias']
-                keyPassword keystoreProperties['keyPassword']
-            }
-        }
-    }
-"""
-              text = text.replace("android {", "android {" + signing_block, 1)
+              signingConfigs {
+                  release {
+                      storeFile file(keystoreProperties['storeFile'])
+                      storePassword keystoreProperties['storePassword']
+                      keyAlias keystoreProperties['keyAlias']
+                      keyPassword keystoreProperties['keyPassword']
+                  }
+              }
+              """
+              block = '\n'.join('    ' + line if line else '' for line in block.strip('\n').split('\n')) + '\n'
+              text = text.replace('android {', 'android {\n' + block, 1)
 
-          if "signingConfig signingConfigs.release" not in text:
-              pattern = r"(buildTypes\s*\{\s*release\s*\{)"
-              text, count = re.subn(
-                  pattern,
-                  r"\1\n            signingConfig signingConfigs.release",
-                  text,
-                  count=1,
-          )
-              if count != 1:
-                  raise SystemExit("Could not locate generated buildTypes release block")
+          if 'signingConfig signingConfigs.release' not in text:
+              marker = '        release {'
+              pos = text.find(marker, text.find('buildTypes'))
+              if pos == -1:
+                  raise SystemExit('Could not locate buildTypes release block')
+              insert_at = pos + len(marker)
+              text = text[:insert_at] + '\n            signingConfig signingConfigs.release' + text[insert_at:]
 
           path.write_text(text)
           PY
@@ -168,11 +138,10 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import os
-
-          path = Path("app/build.gradle")
+          path = Path('app/build.gradle')
           text = path.read_text()
-          text = text.replace("versionCode 1", "versionCode " + os.environ["VERSION_CODE"], 1)
-          text = text.replace("versionName \"1.0\"", "versionName \"" + os.environ["VERSION_NAME"] + "\"", 1)
+          text = text.replace('versionCode 1', 'versionCode ' + os.environ['VERSION_CODE'], 1)
+          text = text.replace('versionName "1.0"', 'versionName "' + os.environ['VERSION_NAME'] + '"', 1)
           path.write_text(text)
           PY
 
@@ -181,16 +150,15 @@ jobs:
         run: ./gradlew assembleRelease --no-daemon
 
       - name: Package APK
-        shell: bash
         env:
           VERSION_NAME: ${{ steps.version.outputs.version_name }}
         run: |
           set -euo pipefail
           mkdir -p release
-          APK_PATH=$(find android/app/build/outputs/apk -type f -name "*.apk" | head -n 1)
+          APK_PATH=$(find android/app/build/outputs/apk -type f -name '*.apk' -print -quit)
           if [ -z "$APK_PATH" ]; then
-            echo "No APK was generated. Available output files:"
-            find android/app/build/outputs -type f | sort || true
+            echo "No APK found. Available APK outputs:"
+            find android/app/build/outputs -type f -name '*.apk' -print || true
             exit 1
           fi
           echo "Packaging APK: $APK_PATH"
