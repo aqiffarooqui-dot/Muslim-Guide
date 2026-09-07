@@ -12,28 +12,28 @@ permissions:
 jobs:
   build-android:
     runs-on: ubuntu-latest
-    env:
-      KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-      KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-      KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-      KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+
       - name: Install dependencies
         run: npm ci
+
       - name: Set app version
         id: version
         shell: bash
@@ -41,16 +41,24 @@ jobs:
           BASE_VERSION=$(node -p "require('./package.json').version")
           echo "version_name=${BASE_VERSION}.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
           echo "version_code=$((100000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_OUTPUT"
+
       - name: Build web app
         env:
           VITE_APP_VERSION: ${{ steps.version.outputs.version_name }}
         run: npm run build
+
       - name: Prepare Capacitor Android
         run: |
           if [ ! -d android ]; then npx cap add android; fi
           npx cap sync android
+
       - name: Prepare release signing
         shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -e
           test -n "$KEYSTORE_B64" || { echo "Missing ANDROID_KEYSTORE_BASE64"; exit 1; }
@@ -59,40 +67,38 @@ jobs:
           test -n "$KEY_PASSWORD" || { echo "Missing ANDROID_KEY_PASSWORD"; exit 1; }
           echo "$KEYSTORE_B64" | base64 --decode > android/muslim-guide-release.jks
           cat > android/keystore.properties <<EOF
-storeFile=muslim-guide-release.jks
-storePassword=$KEYSTORE_PASSWORD
-keyAlias=$KEY_ALIAS
-keyPassword=$KEY_PASSWORD
-EOF
+          storeFile=muslim-guide-release.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
           python3 - <<'PY'
           from pathlib import Path
           p = Path('android/app/build.gradle')
           s = p.read_text()
           if 'keystorePropertiesFile' not in s:
-              s = s.replace('android {', '''android {
-    def keystorePropertiesFile = rootProject.file("keystore.properties")
-    def keystoreProperties = new Properties()
-    if (keystorePropertiesFile.exists()) {
-        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-    }
-    signingConfigs {
-        release {
-            if (keystorePropertiesFile.exists()) {
-                storeFile file(keystoreProperties['storeFile'])
-                storePassword keystoreProperties['storePassword']
-                keyAlias keystoreProperties['keyAlias']
-                keyPassword keystoreProperties['keyPassword']
-            }
-        }
-    }''', 1)
+              signing = """    def keystorePropertiesFile = rootProject.file('keystore.properties')
+              def keystoreProperties = new Properties()
+              if (keystorePropertiesFile.exists()) {
+                  keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+              }
+              signingConfigs {
+                  release {
+                      if (keystorePropertiesFile.exists()) {
+                          storeFile file(keystoreProperties['storeFile'])
+                          storePassword keystoreProperties['storePassword']
+                          keyAlias keystoreProperties['keyAlias']
+                          keyPassword keystoreProperties['keyPassword']
+                      }
+                  }
+              }
+          """
+              s = s.replace('android {', 'android {\n' + signing, 1)
           if 'signingConfig signingConfigs.release' not in s:
-              marker = 'buildTypes {'
-              if marker in s:
-                  before, after = s.split(marker, 1)
-                  after = after.replace('release {', 'release {\n            signingConfig signingConfigs.release', 1)
-                  s = before + marker + after
+              s = s.replace('        release {', '        release {\n            signingConfig signingConfigs.release', 1)
           p.write_text(s)
           PY
+
       - name: Configure Android version
         working-directory: android
         env:
@@ -108,21 +114,25 @@ EOF
           s = s.replace('versionName \"1.0\"', f"versionName \"{os.environ['VERSION_NAME']}\"")
           p.write_text(s)
           PY
+
       - name: Build signed release APK
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon
+
       - name: Package APK
         env:
           VERSION_NAME: ${{ steps.version.outputs.version_name }}
         run: |
           mkdir -p release
           cp android/app/build/outputs/apk/release/app-release.apk "release/Muslim-Guide-${VERSION_NAME}.apk"
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Muslim-Guide-Android-${{ steps.version.outputs.version_name }}
           path: release/*.apk
           retention-days: 30
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
