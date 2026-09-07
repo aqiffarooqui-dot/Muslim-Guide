@@ -1,9 +1,10 @@
 name: Build Muslim Guide Android APK
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -11,24 +12,34 @@ permissions:
 jobs:
   build-android:
     runs-on: ubuntu-latest
+    env:
+      KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
-      - uses: actions/setup-java@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
 
-      - uses: android-actions/setup-android@v3
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Set version
+      - name: Set app version
         id: version
         shell: bash
         run: |
@@ -46,77 +57,49 @@ jobs:
           if [ ! -d android ]; then npx cap add android; fi
           npx cap sync android
 
-      - name: Inject native Android updater
+      - name: Prepare release signing
         shell: bash
         run: |
-          mkdir -p android/app/src/main/java/com/muslimguide/app android/app/src/main/res/xml
-          cat > android/app/src/main/java/com/muslimguide/app/AppUpdaterPlugin.kt <<'EOF'
-          package com.muslimguide.app
-          import android.content.Intent
-          import android.net.Uri
-          import android.os.Build
-          import android.provider.Settings
-          import androidx.core.content.FileProvider
-          import com.getcapacitor.JSObject
-          import com.getcapacitor.Plugin
-          import com.getcapacitor.PluginCall
-          import com.getcapacitor.annotation.CapacitorPlugin
-          import com.getcapacitor.PluginMethod
-          import java.io.File
-          import java.net.HttpURLConnection
-          import java.net.URL
-          @CapacitorPlugin(name = "AppUpdater")
-          class AppUpdaterPlugin : Plugin() {
-            @PluginMethod fun install(call: PluginCall) {
-              val url = call.getString("url")
-              if (url.isNullOrBlank()) { call.reject("Update URL is missing"); return }
-              if (Build.VERSION.SDK_INT >= 26 && !activity.packageManager.canRequestPackageInstalls()) {
-                activity.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${activity.packageName}")))
-                call.resolve(JSObject().put("needsPermission", true)); return
-              }
-              Thread {
-                try {
-                  val c = URL(url).openConnection() as HttpURLConnection
-                  c.instanceFollowRedirects = true; c.connectTimeout = 20000; c.readTimeout = 60000
-                  c.setRequestProperty("User-Agent", "Muslim-Guide-Updater"); c.connect()
-                  if (c.responseCode !in 200..299) throw IllegalStateException("Download failed: HTTP ${c.responseCode}")
-                  val dir = File(activity.cacheDir, "updates").apply { mkdirs() }
-                  val apk = File(dir, "Muslim-Guide-update.apk")
-                  c.inputStream.use { input -> apk.outputStream().use { output -> input.copyTo(output) } }; c.disconnect()
-                  activity.runOnUiThread {
-                    val uri = FileProvider.getUriForFile(activity, "${activity.packageName}.fileprovider", apk)
-                    val intent = Intent(Intent.ACTION_INSTALL_PACKAGE).apply { data = uri; type = "application/vnd.android.package-archive"; addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-                    activity.startActivity(intent); call.resolve(JSObject().put("started", true))
-                  }
-                } catch (e: Exception) { activity.runOnUiThread { call.reject(e.message ?: "Update failed") } }
-              }.start()
-            }
-          }
-          EOF
-
-          cat > android/app/src/main/res/xml/file_paths.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?><paths xmlns:android="http://schemas.android.com/apk/res/android"><cache-path name="updates" path="updates/" /></paths>
-          EOF
-
+          set -e
+          test -n "$KEYSTORE_B64" || { echo "Missing ANDROID_KEYSTORE_BASE64"; exit 1; }
+          test -n "$KEYSTORE_PASSWORD" || { echo "Missing ANDROID_KEYSTORE_PASSWORD"; exit 1; }
+          test -n "$KEY_ALIAS" || { echo "Missing ANDROID_KEY_ALIAS"; exit 1; }
+          test -n "$KEY_PASSWORD" || { echo "Missing ANDROID_KEY_PASSWORD"; exit 1; }
+          echo "$KEYSTORE_B64" | base64 --decode > android/muslim-guide-release.jks
+          cat > android/keystore.properties <<EOF
+storeFile=muslim-guide-release.jks
+storePassword=$KEYSTORE_PASSWORD
+keyAlias=$KEY_ALIAS
+keyPassword=$KEY_PASSWORD
+EOF
           python3 - <<'PY'
           from pathlib import Path
-          main=Path('android/app/src/main/java/com/muslimguide/app/MainActivity.kt')
-          s=main.read_text()
-          if 'AppUpdaterPlugin' not in s:
-            s=s.replace('import com.getcapacitor.BridgeActivity','import android.os.Bundle\nimport com.getcapacitor.BridgeActivity\nimport com.muslimguide.app.AppUpdaterPlugin')
-            s=s.replace('class MainActivity : BridgeActivity()','class MainActivity : BridgeActivity() {\n  override fun onCreate(savedInstanceState: Bundle?) {\n    super.onCreate(savedInstanceState)\n    registerPlugin(AppUpdaterPlugin::class.java)\n  }\n}')
-          main.write_text(s)
-
-          manifest=Path('android/app/src/main/AndroidManifest.xml')
-          ms=manifest.read_text()
-          if 'REQUEST_INSTALL_PACKAGES' not in ms:
-            ms=ms.replace('</manifest>','    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\n</manifest>',1)
-            provider='''        <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.fileprovider" android:exported="false" android:grantUriPermissions="true"><meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" /></provider>'''
-            ms=ms.replace('</application>',provider+'\n    </application>',1)
-          manifest.write_text(ms)
+          p = Path('android/app/build.gradle')
+          s = p.read_text()
+          if 'keystorePropertiesFile' not in s:
+              s = s.replace('android {', '''android {
+    def keystorePropertiesFile = rootProject.file("keystore.properties")
+    def keystoreProperties = new Properties()
+    if (keystorePropertiesFile.exists()) {
+        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    }
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }''', 1)
+          if 'signingConfig signingConfigs.release' not in s:
+              s = s.replace('release {', 'release {\n            signingConfig signingConfigs.release', 1)
+          s = s.replace('versionCode 1', f'versionCode {int("'"'"'${{VERSION_CODE}}'"'"')}') if False else s
+          p.write_text(s)
           PY
 
-      - name: Configure version
+      - name: Configure Android version
         working-directory: android
         env:
           VERSION_NAME: ${{ steps.version.outputs.version_name }}
@@ -125,45 +108,10 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import os
-          p=Path('app/build.gradle')
-          s=p.read_text()
-          s=s.replace('versionCode 1',f'versionCode {os.environ["VERSION_CODE"]}')
-          s=s.replace('versionName "1.0"',f'versionName "{os.environ["VERSION_NAME"]}"')
-          p.write_text(s)
-          PY
-
-      - name: Configure production signing
-        env:
-          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KSP: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KP: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          test -n "$KS" || (echo "ANDROID_KEYSTORE_BASE64 secret is missing" && exit 1)
-          test -n "$KSP" || (echo "ANDROID_KEYSTORE_PASSWORD secret is missing" && exit 1)
-          test -n "$ALIAS" || (echo "ANDROID_KEY_ALIAS secret is missing" && exit 1)
-          test -n "$KP" || (echo "ANDROID_KEY_PASSWORD secret is missing" && exit 1)
-          echo "$KS" | base64 --decode > android/muslim-guide-release.jks
-          cat > android/keystore.properties <<EOF
-          storeFile=muslim-guide-release.jks
-          storePassword=$KSP
-          keyAlias=$ALIAS
-          keyPassword=$KP
-          EOF
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('android/app/build.gradle')
-          s=p.read_text()
-          if 'keystorePropertiesFile' not in s:
-            s=s.replace('android {','''android {
-  def keystorePropertiesFile = rootProject.file("keystore.properties")
-  def keystoreProperties = new Properties()
-  if (keystorePropertiesFile.exists()) keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-  signingConfigs { release { if (keystorePropertiesFile.exists()) { storeFile file(keystoreProperties['storeFile']); storePassword keystoreProperties['storePassword']; keyAlias keystoreProperties['keyAlias']; keyPassword keystoreProperties['keyPassword'] } } }''',1)
-          if 'signingConfig signingConfigs.release' not in s:
-            before, after = s.split('buildTypes {',1)
-            after=after.replace('release {','release {\n      signingConfig signingConfigs.release',1)
-            s=before+'buildTypes {'+after
+          p = Path('app/build.gradle')
+          s = p.read_text()
+          s = s.replace('versionCode 1', f"versionCode {os.environ['VERSION_CODE']}")
+          s = s.replace('versionName \"1.0\"', f"versionName \"{os.environ['VERSION_NAME']}\"")
           p.write_text(s)
           PY
 
@@ -178,7 +126,8 @@ jobs:
           mkdir -p release
           cp android/app/build/outputs/apk/release/app-release.apk "release/Muslim-Guide-${VERSION_NAME}.apk"
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
         with:
           name: Muslim-Guide-Android-${{ steps.version.outputs.version_name }}
           path: release/*.apk
@@ -189,4 +138,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION_NAME: ${{ steps.version.outputs.version_name }}
         run: |
-          gh release create "v${VERSION_NAME}" release/*.apk --title "Muslim Guide ${VERSION_NAME}" --notes "Automatic signed Android build. Direct APK installation remains subject to Android system confirmation/unknown-source permission." --target "${{ github.sha }}"
+          gh release create "v${VERSION_NAME}" release/*.apk --title "Muslim Guide ${VERSION_NAME}" --notes "Automatic signed Android build." --target "${GITHUB_SHA}"
