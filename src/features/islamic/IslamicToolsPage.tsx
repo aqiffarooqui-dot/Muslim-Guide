@@ -1,131 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { CalendarDays, Compass, Navigation, RefreshCw, Bell, BellOff } from "lucide-react";
+import "./islamic-tools.css";
 
 const KAABA_LAT = 21.422487;
 const KAABA_LON = 39.826206;
-
 function toRad(value: number) { return (value * Math.PI) / 180; }
 function toDeg(value: number) { return (value * 180) / Math.PI; }
-
-export function qiblaBearing(latitude: number, longitude: number) {
-  const lat1 = toRad(latitude);
-  const lat2 = toRad(KAABA_LAT);
-  const deltaLon = toRad(KAABA_LON - longitude);
-  const bearing = toDeg(Math.atan2(
-    Math.sin(deltaLon),
-    Math.cos(lat1) * Math.tan(lat2) - Math.sin(lat1) * Math.cos(deltaLon)
-  ));
-  return (bearing + 360) % 360;
-}
-
-function hijriParts(date: Date) {
-  const parts = new Intl.DateTimeFormat("en-TN-u-ca-islamic-umalqura", {
-    day: "numeric", month: "numeric", year: "numeric", timeZone: "Asia/Kolkata"
-  }).formatToParts(date);
-  return Object.fromEntries(parts.filter(p => p.type !== "literal").map(p => [p.type, Number(p.value)]));
-}
-
-function hijriLabel(date: Date) {
-  return new Intl.DateTimeFormat("en-TN-u-ca-islamic-umalqura", {
-    day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Kolkata"
-  }).format(date);
-}
-
-function gregorianLabel(date: Date) {
-  return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", weekday: "short", timeZone: "Asia/Kolkata" }).format(date);
-}
-
-function findRamadanStart(year: number) {
-  const start = new Date(year, 0, 1);
-  for (let i = 0; i < 370; i++) {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i);
-    const h = hijriParts(d);
-    if (h.month === 9) return d;
-  }
-  return null;
-}
-
-function RamadanCalendar() {
-  const [year, setYear] = useState(new Date().getFullYear());
-  const start = useMemo(() => findRamadanStart(year), [year]);
-  const days = useMemo(() => start ? Array.from({ length: 30 }, (_, i) => {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i);
-    return d;
-  }) : [], [start]);
-
-  return <section className="islamic-tool-card">
-    <div className="tool-header">
-      <div><span className="eyebrow">RAMADAN</span><h2>30-Day Ramadan Calendar</h2><p>{start ? `${hijriLabel(start)} · ${year}` : "Calculating dates..."}</p></div>
-      <CalendarDays size={22} />
-    </div>
-    <div className="ramadan-year-row">
-      <button onClick={() => setYear(y => y - 1)}>‹</button><strong>{year}</strong><button onClick={() => setYear(y => y + 1)}>›</button>
-    </div>
-    <div className="ramadan-grid">{days.map((d, i) => <div className="ramadan-day" key={i}><strong>{i + 1}</strong><span>{gregorianLabel(d)}</span>{i === 0 && <small>1 Ramadan</small>}{i === 29 && <small>30 Ramadan</small>}</div>)}</div>
-  </section>;
-}
-
-function IslamicCalendar() {
-  const [offset, setOffset] = useState(0);
-  const date = new Date(); date.setDate(date.getDate() + offset);
-  const h = hijriParts(date);
-  return <section className="islamic-tool-card">
-    <div className="tool-header"><div><span className="eyebrow">HIJRI</span><h2>Islamic Calendar</h2><p>{hijriLabel(date)}</p></div><CalendarDays size={22} /></div>
-    <div className="calendar-controls"><button onClick={() => setOffset(v => v - 1)}>Previous day</button><button onClick={() => setOffset(0)}>Today</button><button onClick={() => setOffset(v => v + 1)}>Next day</button></div>
-    <div className="hijri-highlight"><strong>{h.day}</strong><div><b>{hijriLabel(date).replace(/^\d+\s*/, "")}</b><span>{gregorianLabel(date)}</span></div></div>
-  </section>;
-}
-
-function QiblaFinder() {
-  const [lat, setLat] = useState<number | null>(null);
-  const [lon, setLon] = useState<number | null>(null);
-  const [bearing, setBearing] = useState<number | null>(null);
-  const [heading, setHeading] = useState<number | null>(null);
-  const [status, setStatus] = useState("Tap locate to calculate Qibla");
-
-  const locate = () => {
-    if (!navigator.geolocation) { setStatus("Location is not supported on this device"); return; }
-    setStatus("Getting your location...");
-    navigator.geolocation.getCurrentPosition(p => {
-      const nextBearing = qiblaBearing(p.coords.latitude, p.coords.longitude);
-      setLat(p.coords.latitude); setLon(p.coords.longitude); setBearing(nextBearing); setStatus("Qibla direction calculated");
-    }, () => setStatus("Location permission was denied"), { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 });
-  };
-
-  useEffect(() => {
-    const onOrientation = (event: DeviceOrientationEvent) => {
-      const alpha = event.alpha;
-      if (typeof alpha === "number") setHeading(alpha);
-    };
-    window.addEventListener("deviceorientationabsolute", onOrientation as EventListener);
-    window.addEventListener("deviceorientation", onOrientation as EventListener);
-    return () => { window.removeEventListener("deviceorientationabsolute", onOrientation as EventListener); window.removeEventListener("deviceorientation", onOrientation as EventListener); };
-  }, []);
-
-  const relative = bearing === null || heading === null ? bearing : (bearing - heading + 360) % 360;
-  return <section className="islamic-tool-card qibla-card">
-    <div className="tool-header"><div><span className="eyebrow">DIRECTION</span><h2>Qibla Finder</h2><p>{status}</p></div><Compass size={22} /></div>
-    <div className="qibla-dial" style={{ transform: `rotate(${relative ?? 0}deg)` }}><div className="qibla-arrow"><Navigation size={44} fill="currentColor" /></div><span>N</span><b>QIBLA</b></div>
-    <div className="qibla-reading"><strong>{bearing === null ? "--°" : `${bearing.toFixed(1)}°`}</strong><span>from true North</span>{lat !== null && lon !== null && <small>{lat.toFixed(4)}, {lon.toFixed(4)}</small>}</div>
-    <button className="primary-tool-button" onClick={locate}><RefreshCw size={17} /> Locate & Calibrate</button>
-    <p className="tool-note">For best accuracy, keep the phone flat and away from magnetic objects. The compass sensor is device-dependent.</p>
-  </section>;
-}
-
-export function NotificationSettings() {
-  const [enabled, setEnabled] = useState(() => localStorage.getItem("mg_notifications") === "1");
-  const toggle = async () => {
-    if (!enabled && "Notification" in window) {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") return;
-    }
-    const next = !enabled; setEnabled(next); localStorage.setItem("mg_notifications", next ? "1" : "0");
-  };
-  return <section className="islamic-tool-card notification-tool"><div><b>Prayer Notifications</b><span>{enabled ? "Enabled on this device" : "Disabled"}</span></div><button onClick={toggle} className={`toggle-button ${enabled ? "toggle-active" : ""}`}>{enabled ? <Bell size={18} /> : <BellOff size={18} />}</button></section>;
-}
-
-export default function IslamicToolsPage() {
-  return <div className="page islamic-tools-page"><div className="page-header"><div><div className="eyebrow">ISLAMIC TOOLS</div><h1>More Tools</h1><p>Qibla, Hijri calendar and Ramadan</p></div></div><QiblaFinder /><RamadanCalendar /><IslamicCalendar /><NotificationSettings /></div>;
-}
+export function qiblaBearing(latitude: number, longitude: number) { const lat1 = toRad(latitude); const lat2 = toRad(KAABA_LAT); const deltaLon = toRad(KAABA_LON - longitude); const bearing = toDeg(Math.atan2(Math.sin(deltaLon), Math.cos(lat1) * Math.tan(lat2) - Math.sin(lat1) * Math.cos(deltaLon))); return (bearing + 360) % 360; }
+function hijriParts(date: Date) { const parts = new Intl.DateTimeFormat("en-TN-u-ca-islamic-umalqura", { day: "numeric", month: "numeric", year: "numeric", timeZone: "Asia/Kolkata" }).formatToParts(date); return Object.fromEntries(parts.filter(p => p.type !== "literal").map(p => [p.type, Number(p.value)])) as { day: number; month: number; year: number }; }
+function hijriLabel(date: Date) { return new Intl.DateTimeFormat("en-TN-u-ca-islamic-umalqura", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Kolkata" }).format(date); }
+function gregorianLabel(date: Date) { return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", weekday: "short", timeZone: "Asia/Kolkata" }).format(date); }
+function findRamadanStart(year: number) { const start = new Date(year, 0, 1); for (let i = 0; i < 370; i++) { const d = new Date(start); d.setDate(start.getDate() + i); if (hijriParts(d).month === 9) return d; } return null; }
+function RamadanCalendar() { const [year, setYear] = useState(new Date().getFullYear()); const start = useMemo(() => findRamadanStart(year), [year]); const days = useMemo(() => start ? Array.from({ length: 30 }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d; }) : [], [start]); return <section className="islamic-tool-card"><div className="tool-header"><div><span className="eyebrow">RAMADAN</span><h2>30-Day Ramadan Calendar</h2><p>{start ? `${hijriLabel(start)} · ${year}` : "Calculating dates..."}</p></div><CalendarDays size={22} /></div><div className="ramadan-year-row"><button onClick={() => setYear(y => y - 1)}>‹</button><strong>{year}</strong><button onClick={() => setYear(y => y + 1)}>›</button></div><div className="ramadan-grid">{days.map((d, i) => <div className="ramadan-day" key={i}><strong>{i + 1}</strong><span>{gregorianLabel(d)}</span>{i === 0 && <small>1 Ramadan</small>}{i === 29 && <small>30 Ramadan</small>}</div>)}</div></section>; }
+function IslamicCalendar() { const [offset, setOffset] = useState(0); const date = new Date(); date.setDate(date.getDate() + offset); const h = hijriParts(date); return <section className="islamic-tool-card"><div className="tool-header"><div><span className="eyebrow">HIJRI</span><h2>Islamic Calendar</h2><p>{hijriLabel(date)}</p></div><CalendarDays size={22} /></div><div className="calendar-controls"><button onClick={() => setOffset(v => v - 1)}>Previous day</button><button onClick={() => setOffset(0)}>Today</button><button onClick={() => setOffset(v => v + 1)}>Next day</button></div><div className="hijri-highlight"><strong>{h.day}</strong><div><b>{hijriLabel(date).replace(/^\d+\s*/, "")}</b><span>{gregorianLabel(date)}</span></div></div></section>; }
+function QiblaFinder() { const [lat, setLat] = useState<number | null>(null); const [lon, setLon] = useState<number | null>(null); const [bearing, setBearing] = useState<number | null>(null); const [heading, setHeading] = useState<number | null>(null); const [status, setStatus] = useState("Tap locate to calculate Qibla"); const locate = () => { if (!navigator.geolocation) { setStatus("Location is not supported on this device"); return; } setStatus("Getting your location..."); navigator.geolocation.getCurrentPosition(p => { const b = qiblaBearing(p.coords.latitude, p.coords.longitude); setLat(p.coords.latitude); setLon(p.coords.longitude); setBearing(b); setStatus("Qibla direction calculated"); }, () => setStatus("Location permission was denied"), { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 }); }; useEffect(() => { const onOrientation = (event: DeviceOrientationEvent) => { if (typeof event.alpha === "number") setHeading(event.alpha); }; window.addEventListener("deviceorientationabsolute", onOrientation as EventListener); window.addEventListener("deviceorientation", onOrientation as EventListener); return () => { window.removeEventListener("deviceorientationabsolute", onOrientation as EventListener); window.removeEventListener("deviceorientation", onOrientation as EventListener); }; }, []); const relative = bearing === null || heading === null ? bearing : (bearing - heading + 360) % 360; return <section className="islamic-tool-card qibla-card"><div className="tool-header"><div><span className="eyebrow">DIRECTION</span><h2>Qibla Finder</h2><p>{status}</p></div><Compass size={22} /></div><div className="qibla-dial" style={{ transform: `rotate(${relative ?? 0}deg)` }}><div className="qibla-arrow"><Navigation size={44} fill="currentColor" /></div><span>N</span><b>QIBLA</b></div><div className="qibla-reading"><strong>{bearing === null ? "--°" : `${bearing.toFixed(1)}°`}</strong><span>from true North</span>{lat !== null && lon !== null && <small>{lat.toFixed(4)}, {lon.toFixed(4)}</small>}</div><button className="primary-tool-button" onClick={locate}><RefreshCw size={17} /> Locate &amp; Calibrate</button><p className="tool-note">For best accuracy, keep the phone flat and away from magnetic objects. The compass sensor is device-dependent.</p></section>; }
+export function NotificationSettings() { const [enabled, setEnabled] = useState(() => localStorage.getItem("mg_notifications") === "1"); const toggle = async () => { if (!enabled && "Notification" in window) { const permission = await Notification.requestPermission(); if (permission !== "granted") return; } const next = !enabled; setEnabled(next); localStorage.setItem("mg_notifications", next ? "1" : "0"); }; return <section className="islamic-tool-card notification-tool"><div><b>Prayer Notifications</b><span>{enabled ? "Enabled on this device" : "Disabled"}</span></div><button onClick={toggle} className={`toggle-button ${enabled ? "toggle-active" : ""}`}>{enabled ? <Bell size={18} /> : <BellOff size={18} />}</button></section>; }
+export default function IslamicToolsPage() { return <div className="page islamic-tools-page"><div className="page-header"><div><div className="eyebrow">ISLAMIC TOOLS</div><h1>More Tools</h1><p>Qibla, Hijri calendar and Ramadan</p></div></div><QiblaFinder /><RamadanCalendar /><IslamicCalendar /><NotificationSettings /></div>; }
