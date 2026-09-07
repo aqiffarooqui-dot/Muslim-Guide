@@ -55,6 +55,19 @@ jobs:
           if [ ! -d android ]; then npx cap add android; fi
           npx cap sync android
 
+      - name: Prepare Android Gradle configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('android/app/build.gradle')
+          s = p.read_text()
+          if 'compileSdk' not in s and 'compileSdkVersion' not in s:
+              s = s.replace('android {', 'android {\n    compileSdk 35', 1)
+          p.write_text(s)
+          PY
+
       - name: Prepare release signing
         shell: bash
         env:
@@ -69,23 +82,20 @@ jobs:
           test -n "$KEY_ALIAS" || { echo "Missing ANDROID_KEY_ALIAS"; exit 1; }
           test -n "$KEY_PASSWORD" || { echo "Missing ANDROID_KEY_PASSWORD"; exit 1; }
 
-          # Normalize copy/paste formatting without exposing the secret.
-          # Some editors/GitHub secret pastes can drop trailing '=' padding.
           KEYSTORE_B64_CLEAN=$(printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]')
           test -n "$KEYSTORE_B64_CLEAN" || { echo "ANDROID_KEYSTORE_BASE64 is empty after cleanup"; exit 1; }
 
-          # Validate that the secret contains Base64 characters only, then restore
-          # missing padding if necessary and decode it with Python's strict decoder.
           if ! printf '%s' "$KEYSTORE_B64_CLEAN" | grep -Eq '^[A-Za-z0-9+/]*={0,2}$'; then
-            echo "ANDROID_KEYSTORE_BASE64 contains characters that are not valid Base64. Recreate the secret from the .jks file.";
+            echo "ANDROID_KEYSTORE_BASE64 contains invalid Base64 characters."
             exit 1
           fi
+
           KEYSTORE_B64_PADDED="$KEYSTORE_B64_CLEAN"
           case $(( ${#KEYSTORE_B64_PADDED} % 4 )) in
             0) ;;
             2) KEYSTORE_B64_PADDED="${KEYSTORE_B64_PADDED}==" ;;
             3) KEYSTORE_B64_PADDED="${KEYSTORE_B64_PADDED}=" ;;
-            1) echo "ANDROID_KEYSTORE_BASE64 has an invalid length; the secret is corrupted."; exit 1 ;;
+            1) echo "ANDROID_KEYSTORE_BASE64 has an invalid length."; exit 1 ;;
           esac
 
           KEYSTORE_B64="$KEYSTORE_B64_PADDED" python3 - <<'PY'
@@ -93,18 +103,29 @@ jobs:
           value = os.environ['KEYSTORE_B64']
           data = base64.b64decode(value, validate=True)
           if len(data) < 100:
-              raise SystemExit('Decoded keystore is unexpectedly small; Base64 secret is likely wrong.')
+              raise SystemExit('Decoded keystore is unexpectedly small.')
           with open('android/muslim-guide-release.jks', 'wb') as f:
               f.write(data)
           PY
 
           test -s android/muslim-guide-release.jks || { echo "Decoded keystore is empty"; exit 1; }
-
-          # Verify that the decoded file is a valid Java keystore without printing secrets.
           keytool -list -keystore android/muslim-guide-release.jks -storepass "$KEYSTORE_PASSWORD" >/dev/null
 
           printf '%s\n' "storeFile=muslim-guide-release.jks" "storePassword=$KEYSTORE_PASSWORD" "keyAlias=$KEY_ALIAS" "keyPassword=$KEY_PASSWORD" > android/keystore.properties
-          python3 -c "from pathlib import Path; p=Path('android/app/build.gradle'); s=p.read_text(); marker='android {'; signing=\"    def keystorePropertiesFile = rootProject.file('keystore.properties')\\n    def keystoreProperties = new Properties()\\n    if (keystorePropertiesFile.exists()) {\\n        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\\n    }\\n    signingConfigs {\\n        release {\\n            if (keystorePropertiesFile.exists()) {\\n                storeFile file(keystoreProperties['storeFile'])\\n                storePassword keystoreProperties['storePassword']\\n                keyAlias keystoreProperties['keyAlias']\\n                keyPassword keystoreProperties['keyPassword']\\n            }\\n        }\\n    }\\n\"; s=s.replace(marker,marker+'\\n'+signing,1) if 'keystorePropertiesFile' not in s else s; s=s.replace('        release {','        release {\\n            signingConfig signingConfigs.release',1) if 'signingConfig signingConfigs.release' not in s else s; p.write_text(s)"
+
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('android/app/build.gradle')
+          s = p.read_text()
+          marker = 'android {'
+          if 'keystorePropertiesFile' not in s:
+              signing = """\n    def keystorePropertiesFile = rootProject.file('keystore.properties')\n    def keystoreProperties = new Properties()\n    if (keystorePropertiesFile.exists()) {\n        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\n    }\n\n    signingConfigs {\n        release {\n            if (keystorePropertiesFile.exists()) {\n                storeFile file(keystoreProperties['storeFile'])\n                storePassword keystoreProperties['storePassword']\n                keyAlias keystoreProperties['keyAlias']\n                keyPassword keystoreProperties['keyPassword']\n            }\n        }\n    }\n"""
+              s = s.replace(marker, marker + signing, 1)
+          if 'signingConfig signingConfigs.release' not in s:
+              build_types = 'buildTypes {'
+              s = s.replace(build_types, build_types + "\n        release {\n            signingConfig signingConfigs.release\n        }", 1) if build_types in s and 'release {' not in s[s.index(build_types):] else s
+          p.write_text(s)
+          PY
 
       - name: Configure Android version
         working-directory: android
@@ -112,7 +133,15 @@ jobs:
           VERSION_NAME: ${{ steps.version.outputs.version_name }}
           VERSION_CODE: ${{ steps.version.outputs.version_code }}
         run: |
-          python3 -c "from pathlib import Path; import os; p=Path('app/build.gradle'); s=p.read_text(); s=s.replace('versionCode 1', 'versionCode '+os.environ['VERSION_CODE'], 1); s=s.replace('versionName \"1.0\"', 'versionName \"'+os.environ['VERSION_NAME']+'\"', 1); p.write_text(s)"
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          p = Path('app/build.gradle')
+          s = p.read_text()
+          s = s.replace('versionCode 1', 'versionCode ' + os.environ['VERSION_CODE'], 1)
+          s = s.replace('versionName "1.0"', 'versionName "' + os.environ['VERSION_NAME'] + '"', 1)
+          p.write_text(s)
+          PY
 
       - name: Build signed release APK
         working-directory: android
