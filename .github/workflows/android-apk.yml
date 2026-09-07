@@ -63,17 +63,41 @@ jobs:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          set -e
+          set -euo pipefail
           test -n "$KEYSTORE_B64" || { echo "Missing ANDROID_KEYSTORE_BASE64"; exit 1; }
           test -n "$KEYSTORE_PASSWORD" || { echo "Missing ANDROID_KEYSTORE_PASSWORD"; exit 1; }
           test -n "$KEY_ALIAS" || { echo "Missing ANDROID_KEY_ALIAS"; exit 1; }
           test -n "$KEY_PASSWORD" || { echo "Missing ANDROID_KEY_PASSWORD"; exit 1; }
 
-          # GitHub Secrets can preserve accidental spaces/newlines from copy-paste.
-          # Remove only whitespace before strict Base64 decoding.
+          # Normalize copy/paste formatting without exposing the secret.
+          # Some editors/GitHub secret pastes can drop trailing '=' padding.
           KEYSTORE_B64_CLEAN=$(printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]')
           test -n "$KEYSTORE_B64_CLEAN" || { echo "ANDROID_KEYSTORE_BASE64 is empty after cleanup"; exit 1; }
-          printf '%s' "$KEYSTORE_B64_CLEAN" | base64 --decode > android/muslim-guide-release.jks
+
+          # Validate that the secret contains Base64 characters only, then restore
+          # missing padding if necessary and decode it with Python's strict decoder.
+          if ! printf '%s' "$KEYSTORE_B64_CLEAN" | grep -Eq '^[A-Za-z0-9+/]*={0,2}$'; then
+            echo "ANDROID_KEYSTORE_BASE64 contains characters that are not valid Base64. Recreate the secret from the .jks file.";
+            exit 1
+          fi
+          KEYSTORE_B64_PADDED="$KEYSTORE_B64_CLEAN"
+          case $(( ${#KEYSTORE_B64_PADDED} % 4 )) in
+            0) ;;
+            2) KEYSTORE_B64_PADDED="${KEYSTORE_B64_PADDED}==" ;;
+            3) KEYSTORE_B64_PADDED="${KEYSTORE_B64_PADDED}=" ;;
+            1) echo "ANDROID_KEYSTORE_BASE64 has an invalid length; the secret is corrupted."; exit 1 ;;
+          esac
+
+          KEYSTORE_B64="$KEYSTORE_B64_PADDED" python3 - <<'PY'
+          import base64, os
+          value = os.environ['KEYSTORE_B64']
+          data = base64.b64decode(value, validate=True)
+          if len(data) < 100:
+              raise SystemExit('Decoded keystore is unexpectedly small; Base64 secret is likely wrong.')
+          with open('android/muslim-guide-release.jks', 'wb') as f:
+              f.write(data)
+          PY
+
           test -s android/muslim-guide-release.jks || { echo "Decoded keystore is empty"; exit 1; }
 
           # Verify that the decoded file is a valid Java keystore without printing secrets.
