@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Bell, CalendarDays, Check, ChevronLeft, CircleDot, Compass, Heart, Moon, WifiOff, X } from "lucide-react";
 import QiblaFinder from "../qibla/QiblaFinder";
+import HadithExplorer from "./HadithExplorer";
 import "./islamic-tools.css";
 
 type Tool = "hub" | "qibla" | "ramadan" | "calendar" | "duas" | "hadith" | "tasbeeh" | "notifications";
@@ -10,13 +11,6 @@ const duas = [
   ["Before sleeping", "Bismika Allahumma amutu wa ahya.", "بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا"],
   ["For forgiveness", "Rabbighfir li wa tub alayya, innaka antat-Tawwabur-Rahim.", "رَبِّ اغْفِرْ لِي وَتُبْ عَلَيَّ إِنَّكَ أَنْتَ التَّوَّابُ الرَّحِيمُ"],
   ["Ease and goodness", "Rabbana atina fid-dunya hasanatan wa fil-akhirati hasanatan.", "رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً"],
-];
-
-const hadith = [
-  ["Intentions", "Actions are judged by intentions.", "Sahih al-Bukhari 1; Sahih Muslim 1907"],
-  ["Mercy", "The merciful are shown mercy by the Most Merciful.", "Jami` at-Tirmidhi 1924"],
-  ["Good character", "The best of you are those best in character.", "Sahih al-Bukhari 3559"],
-  ["Brotherhood", "None of you truly believes until he loves for his brother what he loves for himself.", "Sahih al-Bukhari 13; Sahih Muslim 45"],
 ];
 
 function getHijriParts(date: Date) {
@@ -76,7 +70,7 @@ export default function IslamicToolsOverlay() {
 
   const go = (next: Tool) => setTool(next);
   const back = () => setTool("hub");
-  return <div className="islamic-overlay"><div className="islamic-panel"><header><div><span>MUSLIM GUIDE</span><h1>{tool === "hub" ? "Islamic Tools" : ({ qibla: "Qibla Finder", ramadan: "Ramadan", calendar: "Islamic Calendar", duas: "Duas & Azkar", hadith: "Hadith", tasbeeh: "Tasbeeh", notifications: "Notifications" } as Record<string,string>)[tool]}</h1></div><button onClick={() => setOpen(false)}><X/></button></header>{offline && <div className="offline-banner"><WifiOff size={16}/> Offline mode: saved app data remains available where cached.</div>}{tool === "hub" && <><p className="tool-date">{today}</p><div className="tool-cards">{[["qibla","Qibla","Live compass & direction",Compass],["ramadan","Ramadan","30-day fasting planner",Moon],["calendar","Islamic Calendar","Hijri dates",CalendarDays],["duas","Duas & Azkar","Daily supplications",Heart],["hadith","Hadith","Selected authentic narrations",BookOpenIcon],["tasbeeh","Tasbeeh","Digital counter",CircleDot],["notifications","Notifications","Prayer reminder permission",Bell]].map(([id,title,sub,Icon]) => { const C = Icon as any; return <button className="tool-card" key={id as string} onClick={() => go(id as Tool)}><C size={22}/><div><strong>{title as string}</strong><span>{sub as string}</span></div><b>›</b></button>; })}</div></>}{tool !== "hub" && <><button className="back-tool" onClick={back}><ChevronLeft size={18}/> All tools</button>{tool === "qibla" && (coords ? <QiblaFinder latitude={coords.latitude} longitude={coords.longitude}/> : <div className="tool-note">Location permission is needed for Qibla direction.</div>)}{tool === "ramadan" && <Ramadan/>}{tool === "calendar" && <IslamicCalendar/>}{tool === "tasbeeh" && <Tasbeeh/>}{tool === "notifications" && <Notifications/>}{tool === "duas" && <div className="tool-page">{duas.map(([title,en,ar]) => <article className="content-card" key={title}><span>{title}</span><p className="arabic-tool">{ar}</p><p>{en}</p></article>)}</div>}{tool === "hadith" && <div className="tool-page">{hadith.map(([title,text,ref]) => <article className="content-card" key={title}><span>{title}</span><p>{text}</p><small>{ref}</small></article>)}</div>}</>}</div></div>;
+  return <div className="islamic-overlay"><div className="islamic-panel"><header><div><span>MUSLIM GUIDE</span><h1>{tool === "hub" ? "Islamic Tools" : ({ qibla: "Qibla Finder", ramadan: "Ramadan", calendar: "Islamic Calendar", duas: "Duas & Azkar", hadith: "Hadith", tasbeeh: "Tasbeeh", notifications: "Notifications" } as Record<string,string>)[tool]}</h1></div><button onClick={() => setOpen(false)}><X/></button></header>{offline && <div className="offline-banner"><WifiOff size={16}/> Offline mode: saved app data remains available where cached.</div>}{tool === "hub" && <><p className="tool-date">{today}</p><div className="tool-cards">{[["qibla","Qibla","Live compass & direction",Compass],["ramadan","Ramadan","30-day fasting planner",Moon],["calendar","Islamic Calendar","Hijri dates",CalendarDays],["duas","Duas & Azkar","Daily supplications",Heart],["hadith","Hadith","Six major collections",BookOpenIcon],["tasbeeh","Tasbeeh","Digital counter",CircleDot],["notifications","Notifications","Prayer reminder permission",Bell]].map(([id,title,sub,Icon]) => { const C = Icon as any; return <button className="tool-card" key={id as string} onClick={() => go(id as Tool)}><C size={22}/><div><strong>{title as string}</strong><span>{sub as string}</span></div><b>›</b></button>; })}</div></>}{tool !== "hub" && <><button className="back-tool" onClick={back}><ChevronLeft size={18}/> All tools</button>{tool === "qibla" && (coords ? <QiblaFinder latitude={coords.latitude} longitude={coords.longitude}/> : <div className="tool-note">Location permission is needed for Qibla direction.</div>)}{tool === "ramadan" && <Ramadan/>}{tool === "calendar" && <IslamicCalendar/>}{tool === "tasbeeh" && <Tasbeeh/>}{tool === "notifications" && <Notifications/>}{tool === "duas" && <div className="tool-page">{duas.map(([title,en,ar]) => <article className="content-card" key={title}><span>{title}</span><p className="arabic-tool">{ar}</p><p>{en}</p></article>)}</div>}{tool === "hadith" && <HadithExplorer/>}</>}</div></div>;
 }
 
 function BookOpenIcon(props: any) { return <span {...props} style={{ fontSize: 22 }}>📖</span>; }
