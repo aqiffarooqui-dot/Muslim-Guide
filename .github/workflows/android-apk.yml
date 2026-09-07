@@ -170,16 +170,51 @@ jobs:
 
           python3 - <<'PY'
           from pathlib import Path
-          import re
+          import xml.etree.ElementTree as ET
 
-          manifest = Path('android/app/src/main/AndroidManifest.xml')
-          text = manifest.read_text()
-          if 'android.permission.REQUEST_INSTALL_PACKAGES' not in text:
-              text = re.sub(r'(<manifest\b[^>]*>)', r'\1\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />', text, count=1)
-          provider = '''\n        <provider\n            android:name="androidx.core.content.FileProvider"\n            android:authorities="${applicationId}.fileprovider"\n            android:exported="false"\n            android:grantUriPermissions="true">\n            <meta-data\n                android:name="android.support.FILE_PROVIDER_PATHS"\n                android:resource="@xml/file_paths" />\n        </provider>'''
-          if 'androidx.core.content.FileProvider' not in text:
-              text = text.replace('</application>', provider + '\n    </application>', 1)
-          manifest.write_text(text)
+          manifest_path = Path('android/app/src/main/AndroidManifest.xml')
+          text = manifest_path.read_text()
+          try:
+              root = ET.fromstring(text)
+          except ET.ParseError as exc:
+              raise SystemExit(f'Generated AndroidManifest.xml is invalid before updater changes: {exc}')
+
+          ANDROID = 'http://schemas.android.com/apk/res/android'
+          ET.register_namespace('android', ANDROID)
+
+          permission = '{%s}name' % ANDROID
+          request_install = 'android.permission.REQUEST_INSTALL_PACKAGES'
+          if not any(node.tag == 'uses-permission' and node.attrib.get(permission) == request_install for node in root):
+              ET.SubElement(root, 'uses-permission', {permission: request_install})
+
+          application = root.find('application')
+          if application is None:
+              raise SystemExit('AndroidManifest.xml has no <application> element')
+
+          provider_name = 'androidx.core.content.FileProvider'
+          has_provider = any(child.tag == 'provider' and child.attrib.get(permission) == provider_name for child in application)
+          if not has_provider:
+              provider = ET.SubElement(application, 'provider', {
+                  permission: provider_name,
+                  '{%s}authorities' % ANDROID: '${applicationId}.fileprovider',
+                  '{%s}exported' % ANDROID: 'false',
+                  '{%s}grantUriPermissions' % ANDROID: 'true',
+              })
+              ET.SubElement(provider, 'meta-data', {
+                  permission: 'android.support.FILE_PROVIDER_PATHS',
+                  '{%s}resource' % ANDROID: '@xml/file_paths',
+              })
+
+          ET.indent(root, space='    ')
+          manifest_path.write_text(ET.tostring(root, encoding='unicode', xml_declaration=True) + '\n')
+
+          # Parse again after writing so a malformed manifest can never reach Gradle.
+          ET.fromstring(manifest_path.read_text())
+          PY
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
 
           mains = list(Path('android/app/src/main').rglob('MainActivity.java'))
           if not mains:
@@ -361,40 +396,32 @@ jobs:
           path: release/*.apk
           retention-days: 30
 
-      - name: Publish APK update feed
+      - name: Publish APK to update branch
         env:
+          GH_TOKEN: ${{ github.token }}
           VERSION_NAME: ${{ steps.version.outputs.version_name }}
-          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          APK_FILE="Muslim-Guide-${VERSION_NAME}.apk"
-          PUBLISH_DIR="${RUNNER_TEMP}/apk-updates"
-          rm -rf "$PUBLISH_DIR"
-          mkdir -p "$PUBLISH_DIR"
-          cp "release/${APK_FILE}" "$PUBLISH_DIR/${APK_FILE}"
-          cat > "$PUBLISH_DIR/latest.json" <<EOF
-          {
-            "version": "${VERSION_NAME}",
-            "name": "Muslim Guide ${VERSION_NAME}",
-            "notes": "Automatic update from the latest main branch build.",
-            "apkUrl": "https://raw.githubusercontent.com/aqiffarooqui-dot/Muslim-Guide/apk-updates/${APK_FILE}"
-          }
-          EOF
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin apk-updates || true
-
           if git show-ref --verify --quiet refs/remotes/origin/apk-updates; then
-            git checkout -B apk-updates origin/apk-updates
-            git rm -rf . >/dev/null 2>&1 || true
+            git switch -C apk-updates origin/apk-updates
           else
-            git checkout --orphan apk-updates
+            git switch --orphan apk-updates
             git rm -rf . >/dev/null 2>&1 || true
           fi
-
-          cp "$PUBLISH_DIR/${APK_FILE}" "${APK_FILE}"
-          cp "$PUBLISH_DIR/latest.json" latest.json
-          git add "${APK_FILE}" latest.json
-          git commit -m "chore: publish Muslim Guide ${VERSION_NAME} APK" || true
-          git push origin apk-updates --force
+          mkdir -p releases
+          cp "release/Muslim-Guide-${VERSION_NAME}.apk" "releases/Muslim-Guide-${VERSION_NAME}.apk"
+          cp "release/Muslim-Guide-${VERSION_NAME}.apk" "releases/Muslim-Guide-latest.apk"
+          cat > latest.json <<EOF
+          {
+            "version": "${VERSION_NAME}",
+            "versionCode": ${VERSION_CODE},
+            "apkUrl": "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/apk-updates/releases/Muslim-Guide-latest.apk",
+            "releaseUrl": "https://github.com/${GITHUB_REPOSITORY}/tree/apk-updates"
+          }
+          EOF
+          git add releases latest.json
+          git commit -m "chore: publish Muslim Guide ${VERSION_NAME} APK" || echo "No APK distribution changes to commit"
+          git push origin apk-updates
