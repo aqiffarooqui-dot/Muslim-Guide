@@ -4,6 +4,7 @@ import App from './App';
 import IslamicToolsOverlay from './features/islamic/IslamicToolsOverlay';
 import IslamicAI from './features/ai/IslamicAI';
 import './index.css';
+import './features/quran/indian-quran.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
