@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { BookOpen, Moon, Sun, X, ArrowLeft } from "lucide-react";
 import HadithExplorer from "./HadithExplorer";
 import "./android-ui.css";
+import "./android-home-fixes.css";
 
 type LibraryTab = "quran" | "hadith";
 type Theme = "system" | "light" | "dark";
@@ -35,8 +36,7 @@ export default function AndroidUiShell() {
       const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
       if (meta) meta.content = resolved === "dark" ? "#0b0d10" : "#f5f7f6";
     };
-    apply();
-    media.addEventListener?.("change", apply);
+    apply(); media.addEventListener?.("change", apply);
     return () => media.removeEventListener?.("change", apply);
   }, [theme]);
 
@@ -49,81 +49,40 @@ export default function AndroidUiShell() {
       });
       const nav = document.querySelector<HTMLElement>(".bottom-nav");
       if (nav && !nav.querySelector(".mg-tools-nav-button")) {
-        const tools = document.createElement("button");
-        tools.type = "button";
-        tools.className = "mg-tools-nav-button";
+        const tools = document.createElement("button"); tools.type = "button"; tools.className = "mg-tools-nav-button";
         tools.setAttribute("aria-label", "Open Islamic Tools");
         tools.innerHTML = '<span class="mg-tools-nav-icon" aria-hidden="true">⌁</span><span>Tools</span>';
-        tools.addEventListener("click", (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          window.dispatchEvent(new CustomEvent("muslim-guide:open-tool", { detail: "qibla" }));
-        });
+        tools.addEventListener("click", (event) => { event.preventDefault(); event.stopPropagation(); window.dispatchEvent(new CustomEvent("muslim-guide:open-tool", { detail: "qibla" })); });
         nav.appendChild(tools);
       }
     };
     const findNavButton = (label: string) => Array.from(document.querySelectorAll<HTMLButtonElement>(".bottom-nav button")).find((button) => button.querySelector("span")?.textContent?.trim() === label);
     const onClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement | null;
-      const button = target?.closest<HTMLButtonElement>(".bottom-nav button");
+      const target = event.target as HTMLElement | null; const button = target?.closest<HTMLButtonElement>(".bottom-nav button");
       if (!button || button.classList.contains("mg-tools-nav-button")) return;
-      const label = button.querySelector("span")?.textContent?.trim();
-      if (!label) return;
+      const label = button.querySelector("span")?.textContent?.trim(); if (!label) return;
       if (allowNextNavigation) { allowNextNavigation = false; return; }
-      event.preventDefault();
-      event.stopPropagation();
-      window.history.pushState({ muslimGuideNav: label }, "", window.location.href);
+      event.preventDefault(); event.stopPropagation(); window.history.pushState({ muslimGuideNav: label }, "", window.location.href);
       if (label === "Quran & Hadith") { setLibraryTab("quran"); setLibraryOpen(true); return; }
-      allowNextNavigation = true;
-      button.click();
+      allowNextNavigation = true; button.click();
     };
-    const onPopState = () => {
-      if (libraryOpen) { setLibraryOpen(false); return; }
-      const previous = window.history.state?.muslimGuideNav;
-      if (typeof previous === "string") {
-        const previousButton = findNavButton(previous);
-        if (previousButton) { allowNextNavigation = true; previousButton.click(); }
-      }
-    };
-    labelNavigation();
-    const observer = new MutationObserver(labelNavigation);
-    observer.observe(document.body, { childList: true, subtree: true });
-    document.addEventListener("click", onClick, true);
-    window.addEventListener("popstate", onPopState);
+    const onPopState = () => { if (libraryOpen) { setLibraryOpen(false); return; } const previous = window.history.state?.muslimGuideNav; if (typeof previous === "string") { const b = findNavButton(previous); if (b) { allowNextNavigation = true; b.click(); } } };
+    labelNavigation(); const observer = new MutationObserver(labelNavigation); observer.observe(document.body, { childList: true, subtree: true });
+    document.addEventListener("click", onClick, true); window.addEventListener("popstate", onPopState);
     (window as Window & { __mgAllowQuranNavigation?: () => void }).__mgAllowQuranNavigation = () => { allowNextNavigation = true; };
     return () => { observer.disconnect(); document.removeEventListener("click", onClick, true); window.removeEventListener("popstate", onPopState); delete (window as Window & { __mgAllowQuranNavigation?: () => void }).__mgAllowQuranNavigation; };
   }, [libraryOpen]);
 
   useEffect(() => {
     let reminderIndex = Math.floor(Date.now() / 86400000) % DAILY_REMINDERS.length;
-    let timer: number | undefined;
-    let frame: number | undefined;
-    const renderReminder = () => {
-      const card = document.querySelector<HTMLElement>(".reminder-card");
-      if (!card) return;
-      const reminder = DAILY_REMINDERS[reminderIndex];
-      card.dataset.dynamicReminder = "true";
-      card.innerHTML = `<div class="dynamic-reminder-icon" aria-hidden="true">${reminder.type === "QURAN" ? "۞" : "ﷺ"}</div><div class="dynamic-reminder-content"><div class="dynamic-reminder-meta"><span>DAILY REMINDER</span><span>${reminder.type}</span></div><p>${reminder.text}</p><strong>${reminder.source}</strong></div>`;
-    };
-    const moveReminderUp = () => {
-      const reminder = document.querySelector<HTMLElement>(".reminder-card");
-      const quickSection = Array.from(document.querySelectorAll<HTMLElement>("section")).find((section) => section.querySelector("h2")?.textContent?.trim() === "Quick Access");
-      if (reminder && quickSection && reminder.parentElement === quickSection.parentElement) quickSection.parentElement.insertBefore(reminder, quickSection);
-    };
-    const sync = () => { renderReminder(); moveReminderUp(); };
-    sync();
-    frame = window.requestAnimationFrame(sync);
-    timer = window.setInterval(() => { reminderIndex = (reminderIndex + 1) % DAILY_REMINDERS.length; renderReminder(); }, 86400000);
-    const observer = new MutationObserver(() => { if (!document.querySelector(".reminder-card[data-dynamic-reminder='true']")) sync(); moveReminderUp(); });
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => { if (timer) window.clearInterval(timer); if (frame) window.cancelAnimationFrame(frame); observer.disconnect(); };
+    const renderReminder = () => { const card = document.querySelector<HTMLElement>(".reminder-card"); if (!card) return; const r = DAILY_REMINDERS[reminderIndex]; card.dataset.dynamicReminder = "true"; card.innerHTML = `<div class="dynamic-reminder-icon" aria-hidden="true">${r.type === "QURAN" ? "۞" : "ﷺ"}</div><div class="dynamic-reminder-content"><div class="dynamic-reminder-meta"><span>DAILY REMINDER</span><span>${r.type}</span></div><p>${r.text}</p><strong>${r.source}</strong></div>`; };
+    const moveReminderUp = () => { const reminder = document.querySelector<HTMLElement>(".reminder-card"); const quickSection = Array.from(document.querySelectorAll<HTMLElement>("section")).find((s) => s.querySelector("h2")?.textContent?.trim() === "Quick Access"); if (reminder && quickSection && reminder.parentElement === quickSection.parentElement) quickSection.parentElement.insertBefore(reminder, quickSection); };
+    const sync = () => { renderReminder(); moveReminderUp(); }; sync(); const frame = requestAnimationFrame(sync); const timer = window.setInterval(() => { reminderIndex = (reminderIndex + 1) % DAILY_REMINDERS.length; renderReminder(); }, 86400000);
+    const observer = new MutationObserver(() => { if (!document.querySelector(".reminder-card[data-dynamic-reminder='true']")) sync(); moveReminderUp(); }); observer.observe(document.body, { childList: true, subtree: true });
+    return () => { cancelAnimationFrame(frame); clearInterval(timer); observer.disconnect(); };
   }, []);
 
-  const openQuran = () => {
-    setLibraryOpen(false);
-    const quranButton = Array.from(document.querySelectorAll<HTMLButtonElement>(".bottom-nav button")).find((button) => button.querySelector("span")?.textContent?.includes("Quran"));
-    if (quranButton) { (window as Window & { __mgAllowQuranNavigation?: () => void }).__mgAllowQuranNavigation?.(); quranButton.click(); }
-  };
+  const openQuran = () => { setLibraryOpen(false); const quranButton = Array.from(document.querySelectorAll<HTMLButtonElement>(".bottom-nav button")).find((button) => button.querySelector("span")?.textContent?.includes("Quran")); if (quranButton) { (window as Window & { __mgAllowQuranNavigation?: () => void }).__mgAllowQuranNavigation?.(); quranButton.click(); } };
   const closeLibrary = () => { setLibraryOpen(false); if (window.history.state?.muslimGuideNav) window.history.back(); };
 
   return <>
