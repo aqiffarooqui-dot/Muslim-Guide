@@ -6,6 +6,14 @@ import "./android-ui.css";
 type LibraryTab = "quran" | "hadith";
 type Theme = "system" | "light" | "dark";
 
+const DAILY_REMINDERS = [
+  { text: "Indeed, in the remembrance of Allah do hearts find rest.", source: "Quran 13:28", type: "QURAN" },
+  { text: "The most beloved deeds to Allah are those that are consistent, even if small.", source: "Sahih al-Bukhari 6464", type: "HADITH" },
+  { text: "Whoever believes in Allah and the Last Day should speak good or remain silent.", source: "Sahih al-Bukhari 6018", type: "HADITH" },
+  { text: "So remember Me; I will remember you. And be grateful to Me and do not deny Me.", source: "Quran 2:152", type: "QURAN" },
+  { text: "Allah does not look at your bodies or your forms, but He looks at your hearts and deeds.", source: "Sahih Muslim 2564", type: "HADITH" },
+];
+
 function getInitialTheme(): Theme {
   const saved = localStorage.getItem("muslim-guide-theme");
   return saved === "light" || saved === "dark" || saved === "system" ? saved : "system";
@@ -22,7 +30,10 @@ export default function AndroidUiShell() {
     localStorage.setItem("muslim-guide-theme", theme);
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
-      root.dataset.resolvedTheme = theme === "system" ? (media.matches ? "dark" : "light") : theme;
+      const resolved = theme === "system" ? (media.matches ? "dark" : "light") : theme;
+      root.dataset.resolvedTheme = resolved;
+      const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+      if (meta) meta.content = resolved === "dark" ? "#0b0d10" : "#f5f7f6";
     };
     apply();
     media.addEventListener?.("change", apply);
@@ -48,25 +59,20 @@ export default function AndroidUiShell() {
       const target = event.target as HTMLElement | null;
       const button = target?.closest<HTMLButtonElement>(".bottom-nav button");
       if (!button) return;
-
       const label = button.querySelector("span")?.textContent?.trim();
       if (!label) return;
-
       if (allowNextNavigation) {
         allowNextNavigation = false;
         return;
       }
-
       event.preventDefault();
       event.stopPropagation();
       window.history.pushState({ muslimGuideNav: label }, "", window.location.href);
-
       if (label === "Quran & Hadith") {
         setLibraryTab("quran");
         setLibraryOpen(true);
         return;
       }
-
       allowNextNavigation = true;
       button.click();
     };
@@ -105,12 +111,59 @@ export default function AndroidUiShell() {
   }, [libraryOpen]);
 
   useEffect(() => {
-    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
-    if (meta) {
-      const resolved = document.documentElement.dataset.resolvedTheme;
-      meta.content = resolved === "dark" ? "#0b0d10" : "#0f766e";
-    }
-  }, [theme]);
+    let reminderIndex = Math.floor(Date.now() / 86400000) % DAILY_REMINDERS.length;
+    let timer: number | undefined;
+    let frame: number | undefined;
+
+    const renderReminder = () => {
+      const card = document.querySelector<HTMLElement>(".reminder-card");
+      if (!card) return;
+      const reminder = DAILY_REMINDERS[reminderIndex];
+      card.dataset.dynamicReminder = "true";
+      card.innerHTML = `
+        <div class="dynamic-reminder-icon" aria-hidden="true">${reminder.type === "QURAN" ? "۞" : "ﷺ"}</div>
+        <div class="dynamic-reminder-content">
+          <div class="dynamic-reminder-meta"><span>DAILY REMINDER</span><span>${reminder.type}</span></div>
+          <p>${reminder.text}</p>
+          <strong>${reminder.source}</strong>
+        </div>
+      `;
+    };
+
+    const moveReminderUp = () => {
+      const reminder = document.querySelector<HTMLElement>(".reminder-card");
+      const quickSection = Array.from(document.querySelectorAll<HTMLElement>("section")).find(
+        (section) => section.querySelector("h2")?.textContent?.trim() === "Quick Access"
+      );
+      if (reminder && quickSection && reminder.parentElement === quickSection.parentElement) {
+        quickSection.parentElement.insertBefore(reminder, quickSection);
+      }
+    };
+
+    const sync = () => {
+      renderReminder();
+      moveReminderUp();
+    };
+
+    sync();
+    frame = window.requestAnimationFrame(sync);
+    timer = window.setInterval(() => {
+      reminderIndex = (reminderIndex + 1) % DAILY_REMINDERS.length;
+      renderReminder();
+    }, 24 * 60 * 60 * 1000);
+
+    const observer = new MutationObserver(() => {
+      if (!document.querySelector(".reminder-card[data-dynamic-reminder='true']")) sync();
+      moveReminderUp();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      if (timer) window.clearInterval(timer);
+      if (frame) window.cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, []);
 
   const openQuran = () => {
     setLibraryOpen(false);
