@@ -1,0 +1,70 @@
+/* Android-first interaction safety */
+button, a, input, select, textarea, label { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.home-page, .home-page * { pointer-events: auto; }
+
+/* Real Home markup uses prayer-top/prayer-item/quick-card. */
+.home-page .prayer-card {
+  margin-top: 12px!important;
+  padding: 22px!important;
+  border-radius: 30px!important;
+  background: linear-gradient(145deg,#087f5b,#075c48)!important;
+  box-shadow: 0 18px 44px rgba(4,100,70,.22)!important;
+  overflow: hidden;
+}
+.home-page .prayer-top { display:flex!important; align-items:flex-start!important; justify-content:space-between!important; gap:14px!important; }
+.home-page .prayer-card h2 { font-size:26px!important; line-height:1.1!important; margin:2px 0 5px!important; }
+.home-page .prayer-time { font-size:42px!important; line-height:1!important; margin:0!important; white-space:nowrap; }
+.home-page .countdown { margin-top:16px!important; padding-top:13px!important; border-top:1px solid rgba(255,255,255,.17)!important; }
+.home-page .location-row { margin-top:14px!important; padding-top:12px!important; }
+
+/* Make the prayer timings feel like one premium Health-style dashboard card. */
+.home-page .prayer-card + .section { margin-top:10px!important; }
+.home-page .prayer-card + .section .section-heading { display:none!important; }
+.home-page .prayer-card + .section .prayer-list {
+  margin-top:0!important;
+  border-radius:0 0 25px 25px!important;
+  background:var(--mg-surface)!important;
+  border:1px solid var(--mg-border)!important;
+  border-top:0!important;
+  box-shadow:0 14px 34px rgba(16,38,30,.07)!important;
+}
+.home-page .prayer-card + .section .prayer-item {
+  min-width:0!important; min-height:74px!important; padding:10px 6px!important;
+  display:flex!important; flex-direction:column!important; justify-content:center!important; align-items:center!important; gap:5px!important;
+  border-bottom:0!important; border-right:1px solid var(--mg-border)!important;
+}
+.home-page .prayer-card + .section .prayer-item:last-child { border-right:0!important; }
+.home-page .prayer-card + .section .prayer-name { display:flex!important; flex-direction:column!important; gap:4px!important; }
+.home-page .prayer-card + .section .prayer-name svg { width:17px!important; height:17px!important; }
+.home-page .prayer-card + .section .prayer-name span { font-size:9px!important; color:var(--mg-muted)!important; font-weight:800!important; }
+.home-page .prayer-card + .section .prayer-item strong { font-size:11px!important; color:var(--mg-text)!important; }
+
+/* Small, thumb-friendly quick access cards. */
+.home-page .quick-grid { grid-template-columns:repeat(3,minmax(0,1fr))!important; gap:8px!important; }
+.home-page .quick-grid .quick-card { min-height:70px!important; padding:9px 5px!important; border-radius:17px!important; background:var(--mg-surface)!important; color:var(--mg-text)!important; box-shadow:var(--mg-shadow)!important; border:1px solid var(--mg-border)!important; }
+.home-page .quick-grid .quick-icon { width:30px!important; height:30px!important; border-radius:11px!important; font-size:16px!important; }
+.home-page .quick-grid .quick-card > span:last-child { font-size:10px!important; line-height:1.15!important; }
+
+/* Android bottom navigation: add Tools as a real sixth tab. */
+.bottom-nav { grid-template-columns:repeat(6,minmax(0,1fr))!important; }
+.bottom-nav .mg-tools-nav-button { width:100%!important; min-width:0!important; min-height:54px!important; padding:5px 2px!important; display:flex!important; flex-direction:column!important; align-items:center!important; justify-content:center!important; gap:3px!important; border-radius:21px!important; background:transparent!important; color:var(--mg-muted)!important; font:inherit!important; }
+.bottom-nav .mg-tools-nav-button:active { transform:scale(.96); background:var(--mg-surface-2)!important; }
+.bottom-nav .mg-tools-nav-button span { display:block!important; width:100%; text-align:center; overflow:hidden; text-overflow:ellipsis; font-size:9px!important; line-height:1.1; font-weight:750; }
+.bottom-nav .mg-tools-nav-icon { width:20px; height:20px; display:grid; place-items:center; border-radius:8px; background:var(--mg-surface-2); color:var(--mg-accent)!important; font-size:17px!important; }
+
+/* Islamic AI launcher: right-side thumb zone, above bottom pill. */
+#root > button[aria-label="Open Islamic AI"] { left:auto!important; right:16px!important; bottom:92px!important; z-index:1105!important; min-height:46px!important; padding:0 15px!important; background:color-mix(in srgb,var(--mg-surface) 92%,transparent)!important; color:var(--mg-text)!important; border:1px solid var(--mg-border)!important; box-shadow:0 10px 28px rgba(0,0,0,.16)!important; backdrop-filter:blur(20px)!important; -webkit-backdrop-filter:blur(20px)!important; }
+#root > div[style*="z-index: 1100"] { align-items:center!important; justify-content:flex-end!important; padding:16px!important; box-sizing:border-box!important; }
+#root > div[style*="z-index: 1100"] > section { width:min(520px,100%)!important; max-height:88dvh!important; border-radius:28px!important; margin-left:auto!important; background:var(--mg-surface)!important; color:var(--mg-text)!important; box-shadow:0 24px 70px rgba(0,0,0,.28)!important; border:1px solid var(--mg-border)!important; }
+
+/* Keep every interactive layer above decorative effects. */
+.android-ui-toolbar, .bottom-nav, .islamic-fab, .quran-hadith-overlay, #root > button[aria-label="Open Islamic AI"] { pointer-events:auto!important; }
+
+@media(max-width:600px){
+  .home-page .prayer-card { padding:18px!important; border-radius:26px!important; }
+  .home-page .prayer-card h2 { font-size:23px!important; }
+  .home-page .prayer-time { font-size:clamp(34px,11vw,40px)!important; }
+  .home-page .prayer-card + .section .prayer-list { border-radius:0 0 22px 22px!important; }
+  .home-page .prayer-card + .section .prayer-item { min-height:70px!important; }
+  #root > button[aria-label="Open Islamic AI"] { right:14px!important; bottom:88px!important; }
+}
