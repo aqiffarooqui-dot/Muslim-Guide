@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Capacitor } from "@capacitor/core";
+import { NativeAppUpdater } from "./nativeAppUpdater";
 
 const UPDATE_URL = "https://api.github.com/repos/aqiffarooqui-dot/Muslim-Guide/releases/latest";
 const VERSION = import.meta.env.VITE_APP_VERSION || "0.1.0";
@@ -25,6 +27,7 @@ function newer(latest: string, current: string) {
 
 export default function AppUpdate() {
   const [checking, setChecking] = useState(false);
+  const [installing, setInstalling] = useState(false);
   const [release, setRelease] = useState<Release | null>(null);
   const [message, setMessage] = useState("You’re using the latest version.");
 
@@ -57,6 +60,28 @@ export default function AppUpdate() {
   const apk = release?.assets?.find(asset => asset.name?.toLowerCase().endsWith(".apk"));
   const updateUrl = apk?.browser_download_url || release?.html_url;
 
+  const startUpdate = async () => {
+    if (!updateUrl) return;
+    if (!apk || !Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
+      window.open(updateUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+    setInstalling(true);
+    setMessage("Downloading the update…");
+    try {
+      const result = await NativeAppUpdater.install({ url: updateUrl });
+      if (result?.needsPermission) {
+        setMessage("Allow installs from Muslim Guide in Android settings, then tap Update again.");
+      } else {
+        setMessage("Update downloaded. Android will now open the installer.");
+      }
+    } catch {
+      setMessage("Couldn’t start the update. Please try again.");
+    } finally {
+      setInstalling(false);
+    }
+  };
+
   return <div className="tool-page">
     <div className="tool-hero">
       <div><span>APP UPDATE</span><h2>Muslim Guide</h2><p>Current version: v{VERSION}</p></div>
@@ -67,15 +92,11 @@ export default function AppUpdate() {
         <strong>{release.name || release.tag_name}</strong>
         {release.body ? <p>{release.body}</p> : null}
       </div>
-      <button
-        className="primary-tool-button"
-        onClick={() => updateUrl && window.open(updateUrl, "_blank", "noopener,noreferrer")}
-        disabled={!updateUrl}
-      >
-        {apk ? "Download update" : "View update"}
+      <button className="primary-tool-button" onClick={() => void startUpdate()} disabled={!updateUrl || installing}>
+        {installing ? "Preparing update…" : apk ? "Update now" : "View update"}
       </button>
     </>}
-    <button className="primary-tool-button" onClick={() => void check()} disabled={checking}>
+    <button className="primary-tool-button" onClick={() => void check()} disabled={checking || installing}>
       {checking ? "Checking…" : "Check for updates"}
     </button>
   </div>;
