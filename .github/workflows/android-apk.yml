@@ -68,7 +68,17 @@ jobs:
           test -n "$KEYSTORE_PASSWORD" || { echo "Missing ANDROID_KEYSTORE_PASSWORD"; exit 1; }
           test -n "$KEY_ALIAS" || { echo "Missing ANDROID_KEY_ALIAS"; exit 1; }
           test -n "$KEY_PASSWORD" || { echo "Missing ANDROID_KEY_PASSWORD"; exit 1; }
-          echo "$KEYSTORE_B64" | base64 --decode > android/muslim-guide-release.jks
+
+          # GitHub Secrets can preserve accidental spaces/newlines from copy-paste.
+          # Remove only whitespace before strict Base64 decoding.
+          KEYSTORE_B64_CLEAN=$(printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]')
+          test -n "$KEYSTORE_B64_CLEAN" || { echo "ANDROID_KEYSTORE_BASE64 is empty after cleanup"; exit 1; }
+          printf '%s' "$KEYSTORE_B64_CLEAN" | base64 --decode > android/muslim-guide-release.jks
+          test -s android/muslim-guide-release.jks || { echo "Decoded keystore is empty"; exit 1; }
+
+          # Verify that the decoded file is a valid Java keystore without printing secrets.
+          keytool -list -keystore android/muslim-guide-release.jks -storepass "$KEYSTORE_PASSWORD" >/dev/null
+
           printf '%s\n' "storeFile=muslim-guide-release.jks" "storePassword=$KEYSTORE_PASSWORD" "keyAlias=$KEY_ALIAS" "keyPassword=$KEY_PASSWORD" > android/keystore.properties
           python3 -c "from pathlib import Path; p=Path('android/app/build.gradle'); s=p.read_text(); marker='android {'; signing=\"    def keystorePropertiesFile = rootProject.file('keystore.properties')\\n    def keystoreProperties = new Properties()\\n    if (keystorePropertiesFile.exists()) {\\n        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\\n    }\\n    signingConfigs {\\n        release {\\n            if (keystorePropertiesFile.exists()) {\\n                storeFile file(keystoreProperties['storeFile'])\\n                storePassword keystoreProperties['storePassword']\\n                keyAlias keystoreProperties['keyAlias']\\n                keyPassword keystoreProperties['keyPassword']\\n            }\\n        }\\n    }\\n\"; s=s.replace(marker,marker+'\\n'+signing,1) if 'keystorePropertiesFile' not in s else s; s=s.replace('        release {','        release {\\n            signingConfig signingConfigs.release',1) if 'signingConfig signingConfigs.release' not in s else s; p.write_text(s)"
 
