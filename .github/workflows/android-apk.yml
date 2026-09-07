@@ -52,6 +52,7 @@ jobs:
 
       - name: Prepare Capacitor Android
         run: |
+          set -euo pipefail
           if [ ! -d android ]; then
             npx cap add android
           fi
@@ -102,15 +103,22 @@ jobs:
           Path('android/muslim-guide-release.jks').write_bytes(data)
           PY
 
-          test -s android/muslim-guide-release.jks
-          keytool -list -keystore android/muslim-guide-release.jks -storepass "$KEYSTORE_PASSWORD" >/dev/null
+          KEYSTORE_PATH="$GITHUB_WORKSPACE/android/muslim-guide-release.jks"
+          test -s "$KEYSTORE_PATH"
+          keytool -list -keystore "$KEYSTORE_PATH" -storepass "$KEYSTORE_PASSWORD" >/dev/null
 
           cat > android/keystore.properties <<EOF
-          storeFile=muslim-guide-release.jks
+          storeFile=$KEYSTORE_PATH
           storePassword=$KEYSTORE_PASSWORD
           keyAlias=$KEY_ALIAS
           keyPassword=$KEY_PASSWORD
           EOF
+
+          test -f android/keystore.properties
+          grep -q '^storeFile=' android/keystore.properties
+          grep -q '^storePassword=' android/keystore.properties
+          grep -q '^keyAlias=' android/keystore.properties
+          grep -q '^keyPassword=' android/keystore.properties
 
           python3 - <<'PY'
           from pathlib import Path
@@ -152,6 +160,7 @@ jobs:
           VERSION_NAME: ${{ steps.version.outputs.version_name }}
           VERSION_CODE: ${{ steps.version.outputs.version_code }}
         run: |
+          set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
           import os
@@ -166,20 +175,34 @@ jobs:
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon
 
+      - name: Verify signed APK output
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t APKS < <(find android/app/build/outputs/apk/release -type f -name '*.apk' -print)
+          if [ "${#APKS[@]}" -eq 0 ]; then
+            echo "No release APK found. Available APK outputs:"
+            find android/app/build/outputs -type f -name '*.apk' -print || true
+            exit 1
+          fi
+          echo "Release APK(s):"
+          printf '%s\n' "${APKS[@]}"
+
       - name: Package APK
         env:
           VERSION_NAME: ${{ steps.version.outputs.version_name }}
         run: |
           set -euo pipefail
           mkdir -p release
-          APK_PATH=$(find android/app/build/outputs/apk -type f -name '*.apk' -print -quit)
+          APK_PATH=$(find android/app/build/outputs/apk/release -type f -name '*.apk' -print -quit)
           if [ -z "$APK_PATH" ]; then
-            echo "No APK found. Available APK outputs:"
+            echo "No release APK found. Available APK outputs:"
             find android/app/build/outputs -type f -name '*.apk' -print || true
             exit 1
           fi
           echo "Packaging APK: $APK_PATH"
           cp "$APK_PATH" "release/Muslim-Guide-${VERSION_NAME}.apk"
+          test -s "release/Muslim-Guide-${VERSION_NAME}.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -193,4 +216,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION_NAME: ${{ steps.version.outputs.version_name }}
         run: |
-          gh release create "v${VERSION_NAME}" release/*.apk --title "Muslim Guide ${VERSION_NAME}" --notes "Automatic signed Android build." --target "${GITHUB_SHA}"
+          set -euo pipefail
+          gh release create "v${VERSION_NAME}" release/*.apk --title "Muslim Guide ${VERSION_NAME}" --notes "Automatic signed Android build from main." --target "${GITHUB_SHA}"
