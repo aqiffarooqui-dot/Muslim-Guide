@@ -11,6 +11,44 @@ function getInitialTheme(): Theme {
   return saved === "light" || saved === "dark" || saved === "system" ? saved : "system";
 }
 
+function syncStatusBar(resolved: "light" | "dark") {
+  const root = document.documentElement;
+  const dark = resolved === "dark";
+  const background = dark ? "#0b0d10" : "#f5f7f6";
+
+  root.dataset.statusBar = resolved;
+  root.style.setProperty("--mg-status-bar-bg", background);
+
+  let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+  if (!meta) {
+    meta = document.createElement("meta");
+    meta.name = "theme-color";
+    document.head.appendChild(meta);
+  }
+  meta.content = background;
+
+  let colorScheme = document.querySelector<HTMLMetaElement>('meta[name="color-scheme"]');
+  if (!colorScheme) {
+    colorScheme = document.createElement("meta");
+    colorScheme.name = "color-scheme";
+    document.head.appendChild(colorScheme);
+  }
+  colorScheme.content = dark ? "dark" : "light";
+
+  // Capacitor Android reads these CSS/HTML signals for the WebView surface.
+  // The native layer is also updated when available, without making web builds depend on it.
+  const nativeWindow = window as Window & {
+    Capacitor?: { Plugins?: { StatusBar?: { setStyle?: (options: { style: string }) => Promise<unknown> | unknown; setBackgroundColor?: (options: { color: string }) => Promise<unknown> | unknown } } };
+  };
+  const statusBar = nativeWindow.Capacitor?.Plugins?.StatusBar;
+  if (statusBar?.setStyle) {
+    void statusBar.setStyle({ style: dark ? "DARK" : "LIGHT" });
+  }
+  if (statusBar?.setBackgroundColor) {
+    void statusBar.setBackgroundColor({ color: background });
+  }
+}
+
 export default function AndroidUiShell() {
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
   const [libraryOpen, setLibraryOpen] = useState(false);
@@ -23,8 +61,7 @@ export default function AndroidUiShell() {
     const apply = () => {
       const resolved = theme === "system" ? (media.matches ? "dark" : "light") : theme;
       root.dataset.resolvedTheme = resolved;
-      const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
-      if (meta) meta.content = resolved === "dark" ? "#0b0d10" : "#f5f7f6";
+      syncStatusBar(resolved);
     };
     apply();
     media.addEventListener?.("change", apply);
@@ -32,13 +69,10 @@ export default function AndroidUiShell() {
     return () => media.removeEventListener?.("change", apply);
   }, [theme]);
 
-  // Keep Home interactions native. The previous global click/history interception
-  // could cancel React's click events and cause the Android UI to feel frozen.
   useEffect(() => {
     const openTool = (tool: string) => {
       window.dispatchEvent(new CustomEvent("muslim-guide:open-tool", { detail: tool }));
     };
-
     const quickAccess = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null;
       const button = target?.closest<HTMLButtonElement>(".quick-grid button");
@@ -50,23 +84,14 @@ export default function AndroidUiShell() {
         if (quran) quran.click();
         return;
       }
-      const map: Record<string, string> = {
-        hadith: "hadith",
-        duas: "duas",
-        qibla: "qibla",
-        tasbeeh: "tasbeeh",
-        calendar: "calendar",
-        ramadan: "ramadan",
-      };
+      const map: Record<string, string> = { hadith: "hadith", duas: "duas", qibla: "qibla", tasbeeh: "tasbeeh", calendar: "calendar", ramadan: "ramadan" };
       const key = Object.keys(map).find((name) => label.includes(name));
       if (key) openTool(map[key]);
     };
-
     document.addEventListener("click", quickAccess, true);
     return () => document.removeEventListener("click", quickAccess, true);
   }, []);
 
-  // Add Tools as a real sixth item to the existing React bottom navigation.
   useEffect(() => {
     const installToolsButton = () => {
       const nav = document.querySelector<HTMLElement>(".bottom-nav");
@@ -88,40 +113,29 @@ export default function AndroidUiShell() {
     return () => observer.disconnect();
   }, []);
 
-  const openTool = (tool: string) => {
-    window.dispatchEvent(new CustomEvent("muslim-guide:open-tool", { detail: tool }));
-  };
-
+  const openTool = (tool: string) => window.dispatchEvent(new CustomEvent("muslim-guide:open-tool", { detail: tool }));
   const openQuran = () => {
     setLibraryOpen(false);
     const quranButton = Array.from(document.querySelectorAll<HTMLButtonElement>(".bottom-nav button"))
       .find((button) => button.querySelector("span")?.textContent?.toLowerCase().includes("quran"));
     quranButton?.click();
   };
-
   const closeLibrary = () => setLibraryOpen(false);
 
   return (
     <>
       <div className="android-ui-toolbar" aria-label="Theme controls">
-        <button
-          className="android-theme-pill"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          aria-label="Toggle day and night mode"
-        >
+        <button className="android-theme-pill" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Toggle day and night mode">
           {theme === "dark" ? <Moon size={17} /> : <Sun size={17} />}
           <span>{theme === "dark" ? "Night" : "Day"}</span>
         </button>
       </div>
-
       {libraryOpen && (
         <div className="quran-hadith-overlay" role="dialog" aria-modal="true" aria-label="Quran and Hadith">
           <div className="quran-hadith-sheet">
             <header className="quran-hadith-header">
               <div className="quran-hadith-title-row">
-                <button className="android-close-button android-back-button" onClick={closeLibrary} aria-label="Back">
-                  <ArrowLeft size={20} />
-                </button>
+                <button className="android-close-button android-back-button" onClick={closeLibrary} aria-label="Back"><ArrowLeft size={20} /></button>
                 <div><span className="android-eyebrow">ISLAMIC LIBRARY</span><h2>Quran &amp; Hadith</h2></div>
               </div>
               <button className="android-close-button" onClick={closeLibrary} aria-label="Close"><X size={21} /></button>
