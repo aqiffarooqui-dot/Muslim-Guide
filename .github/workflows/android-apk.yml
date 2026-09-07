@@ -181,40 +181,34 @@ jobs:
 
           ANDROID = 'http://schemas.android.com/apk/res/android'
           ET.register_namespace('android', ANDROID)
+          NAME = '{%s}name' % ANDROID
 
-          permission = '{%s}name' % ANDROID
-          request_install = 'android.permission.REQUEST_INSTALL_PACKAGES'
-          if not any(node.tag == 'uses-permission' and node.attrib.get(permission) == request_install for node in root):
-              ET.SubElement(root, 'uses-permission', {permission: request_install})
+          if not any(node.tag == 'uses-permission' and node.attrib.get(NAME) == 'android.permission.REQUEST_INSTALL_PACKAGES' for node in root):
+              ET.SubElement(root, 'uses-permission', {NAME: 'android.permission.REQUEST_INSTALL_PACKAGES'})
 
           application = root.find('application')
           if application is None:
               raise SystemExit('AndroidManifest.xml has no <application> element')
 
-          provider_name = 'androidx.core.content.FileProvider'
-          has_provider = any(child.tag == 'provider' and child.attrib.get(permission) == provider_name for child in application)
-          if not has_provider:
+          if not any(child.tag == 'provider' and child.attrib.get(NAME) == 'androidx.core.content.FileProvider' for child in application):
               provider = ET.SubElement(application, 'provider', {
-                  permission: provider_name,
+                  NAME: 'androidx.core.content.FileProvider',
                   '{%s}authorities' % ANDROID: '${applicationId}.fileprovider',
                   '{%s}exported' % ANDROID: 'false',
                   '{%s}grantUriPermissions' % ANDROID: 'true',
               })
               ET.SubElement(provider, 'meta-data', {
-                  permission: 'android.support.FILE_PROVIDER_PATHS',
+                  NAME: 'android.support.FILE_PROVIDER_PATHS',
                   '{%s}resource' % ANDROID: '@xml/file_paths',
               })
 
           ET.indent(root, space='    ')
           manifest_path.write_text(ET.tostring(root, encoding='unicode', xml_declaration=True) + '\n')
-
-          # Parse again after writing so a malformed manifest can never reach Gradle.
           ET.fromstring(manifest_path.read_text())
           PY
 
           python3 - <<'PY'
           from pathlib import Path
-          import re
 
           mains = list(Path('android/app/src/main').rglob('MainActivity.java'))
           if not mains:
@@ -398,8 +392,8 @@ jobs:
 
       - name: Publish APK to update branch
         env:
-          GH_TOKEN: ${{ github.token }}
           VERSION_NAME: ${{ steps.version.outputs.version_name }}
+          VERSION_CODE: ${{ steps.version.outputs.version_code }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
