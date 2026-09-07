@@ -26,12 +26,14 @@ function newer(latest: string, current: string) {
 }
 
 export default function AppUpdate() {
+  const isAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
   const [checking, setChecking] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [release, setRelease] = useState<Release | null>(null);
-  const [message, setMessage] = useState("You’re using the latest version.");
+  const [message, setMessage] = useState("");
 
   const check = async () => {
+    if (!isAndroid) return;
     setChecking(true);
     try {
       const response = await fetch(UPDATE_URL, {
@@ -46,34 +48,41 @@ export default function AppUpdate() {
         setMessage(`New version ${latest.replace(/^v/i, "v")} is available.`);
       } else {
         setRelease(null);
-        setMessage("You’re using the latest version.");
+        setMessage("");
       }
     } catch {
-      setMessage("Couldn’t check for updates. Please try again when online.");
+      setMessage("Couldn’t check for updates. Please try again later.");
     } finally {
       setChecking(false);
     }
   };
 
-  useEffect(() => { void check(); }, []);
+  useEffect(() => {
+    if (!isAndroid) return;
+    void check();
+    const timer = window.setInterval(() => void check(), 30 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, [isAndroid]);
 
-  const apk = release?.assets?.find(asset => asset.name?.toLowerCase().endsWith(".apk"));
-  const updateUrl = apk?.browser_download_url || release?.html_url;
+  if (!isAndroid || !release) return null;
+
+  const apk = release.assets?.find(asset => asset.name?.toLowerCase().endsWith(".apk"));
+  const updateUrl = apk?.browser_download_url || release.html_url;
 
   const startUpdate = async () => {
     if (!updateUrl) return;
-    if (!apk || !Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
-      window.open(updateUrl, "_blank", "noopener,noreferrer");
-      return;
-    }
     setInstalling(true);
     setMessage("Downloading the update…");
     try {
+      if (!apk || !Capacitor.isPluginAvailable("AppUpdater")) {
+        window.open(updateUrl, "_blank", "noopener,noreferrer");
+        return;
+      }
       const result = await NativeAppUpdater.install({ url: updateUrl });
       if (result?.needsPermission) {
         setMessage("Allow installs from Muslim Guide in Android settings, then tap Update again.");
       } else {
-        setMessage("Update downloaded. Android will now open the installer.");
+        setMessage("Update downloaded. Android is opening the installer…");
       }
     } catch {
       setMessage("Couldn’t start the update. Please try again.");
@@ -82,22 +91,20 @@ export default function AppUpdate() {
     }
   };
 
-  return <div className="tool-page">
-    <div className="tool-hero">
-      <div><span>APP UPDATE</span><h2>Muslim Guide</h2><p>Current version: v{VERSION}</p></div>
-    </div>
-    <div className="tool-note">{message}</div>
-    {release && <>
-      <div className="tool-note">
-        <strong>{release.name || release.tag_name}</strong>
-        {release.body ? <p>{release.body}</p> : null}
+  return (
+    <div style={{ position: "fixed", top: 16, left: 16, right: 16, zIndex: 99999, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
+      <div style={{ width: "min(520px, 100%)", borderRadius: 20, padding: 16, background: "rgba(15,23,42,.97)", color: "white", boxShadow: "0 18px 50px rgba(0,0,0,.35)", border: "1px solid rgba(255,255,255,.12)", pointerEvents: "auto" }}>
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: ".08em", opacity: .7 }}>MUSLIM GUIDE UPDATE</div>
+        <div style={{ marginTop: 5, fontSize: 18, fontWeight: 800 }}>{release.name || release.tag_name}</div>
+        <div style={{ marginTop: 4, fontSize: 13, opacity: .8 }}>{message || `Current version: v${VERSION}`}</div>
+        {release.body ? <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.4, opacity: .78, maxHeight: 70, overflow: "auto" }}>{release.body}</div> : null}
+        <button onClick={() => void startUpdate()} disabled={!updateUrl || installing} style={{ marginTop: 12, width: "100%", border: 0, borderRadius: 12, padding: "12px 14px", fontWeight: 800, cursor: installing ? "wait" : "pointer" }}>
+          {installing ? "Preparing update…" : apk ? "Update now" : "View update"}
+        </button>
+        <button onClick={() => setRelease(null)} style={{ marginTop: 7, width: "100%", border: 0, background: "transparent", color: "rgba(255,255,255,.65)", padding: 6, cursor: "pointer" }}>
+          Later
+        </button>
       </div>
-      <button className="primary-tool-button" onClick={() => void startUpdate()} disabled={!updateUrl || installing}>
-        {installing ? "Preparing update…" : apk ? "Update now" : "View update"}
-      </button>
-    </>}
-    <button className="primary-tool-button" onClick={() => void check()} disabled={checking || installing}>
-      {checking ? "Checking…" : "Check for updates"}
-    </button>
-  </div>;
+    </div>
+  );
 }
