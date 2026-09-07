@@ -1,6 +1,6 @@
 {
-  "version": "0.1.0.44",
-  "name": "Muslim Guide 0.1.0.44",
-  "notes": "Automatic update from the latest main branch build.",
-  "apkUrl": "https://raw.githubusercontent.com/aqiffarooqui-dot/Muslim-Guide/apk-updates/Muslim-Guide-0.1.0.44.apk"
+  "version": "0.1.0.49",
+  "versionCode": 100049,
+  "apkUrl": "https://raw.githubusercontent.com/aqiffarooqui-dot/Muslim-Guide/apk-updates/releases/Muslim-Guide-latest.apk",
+  "releaseUrl": "https://github.com/aqiffarooqui-dot/Muslim-Guide/tree/apk-updates"
 }
