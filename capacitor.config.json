@@ -1,0 +1,9 @@
+{
+  "appId": "com.muslimguide.app",
+  "appName": "Muslim Guide",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "android": {
+    "backgroundColor": "#0b1220"
+  }
+}
