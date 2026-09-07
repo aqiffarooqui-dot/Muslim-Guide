@@ -84,7 +84,24 @@ jobs:
           test -n "$KEY_ALIAS" || { echo "Missing ANDROID_KEY_ALIAS"; exit 1; }
           test -n "$KEY_PASSWORD" || { echo "Missing ANDROID_KEY_PASSWORD"; exit 1; }
 
-          printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]' | base64 -d > android/muslim-guide-release.jks
+          python3 - "$KEYSTORE_B64" <<'PY'
+          import base64
+          import binascii
+          import sys
+          from pathlib import Path
+
+          raw = sys.argv[1].strip()
+          compact = ''.join(raw.split())
+          compact += '=' * ((4 - len(compact) % 4) % 4)
+          try:
+              data = base64.b64decode(compact, validate=True)
+          except (binascii.Error, ValueError) as exc:
+              raise SystemExit(f"ANDROID_KEYSTORE_BASE64 is not valid base64: {exc}")
+          if not data:
+              raise SystemExit("ANDROID_KEYSTORE_BASE64 decoded to an empty file")
+          Path('android/muslim-guide-release.jks').write_bytes(data)
+          PY
+
           test -s android/muslim-guide-release.jks
           keytool -list -keystore android/muslim-guide-release.jks -storepass "$KEYSTORE_PASSWORD" >/dev/null
 
