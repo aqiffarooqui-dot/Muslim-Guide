@@ -1,17 +1,43 @@
-const CACHE = 'muslim-guide-v2';
+const CACHE = 'muslim-guide-v3';
 const APP_SHELL = ['/', '/index.html'];
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches.open(CACHE)
+      .then(cache => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  event.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+
   const request = event.request;
+  const isNavigation = request.mode === 'navigate';
+
+  if (isNavigation) {
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          if (response && response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE).then(cache => cache.put(request, copy)).catch(() => undefined);
+          }
+          return response;
+        })
+        .catch(() => caches.match(request).then(cached => cached || caches.match('/index.html')))
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(request).then(cached => {
       if (cached) return cached;
@@ -20,7 +46,7 @@ self.addEventListener('fetch', event => {
         const copy = response.clone();
         caches.open(CACHE).then(cache => cache.put(request, copy)).catch(() => undefined);
         return response;
-      }).catch(() => caches.match('/index.html'));
+      }).catch(() => undefined);
     })
   );
 });
