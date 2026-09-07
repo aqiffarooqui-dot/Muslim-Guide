@@ -1,0 +1,318 @@
+:root {
+  --mg-bg: #f5f7f6;
+  --mg-surface: rgba(255,255,255,.94);
+  --mg-surface-2: #eef3f0;
+  --mg-text: #17201d;
+  --mg-muted: #6d7b75;
+  --mg-accent: #087f5b;
+  --mg-border: rgba(23,32,29,.08);
+  --mg-shadow: 0 12px 32px rgba(16,38,30,.08);
+  --mg-radius-xl: 30px;
+  --mg-radius-lg: 24px;
+  --mg-radius-pill: 999px;
+}
+
+:root[data-resolved-theme="dark"] {
+  --mg-bg: #0b0d10;
+  --mg-surface: rgba(24,27,31,.96);
+  --mg-surface-2: #20252a;
+  --mg-text: #f3f5f4;
+  --mg-muted: #aab4af;
+  --mg-accent: #7de2b8;
+  --mg-border: rgba(255,255,255,.08);
+  --mg-shadow: 0 16px 40px rgba(0,0,0,.35);
+}
+
+html[data-resolved-theme="dark"],
+html[data-resolved-theme="dark"] body {
+  background: var(--mg-bg) !important;
+  color: var(--mg-text);
+}
+
+html[data-resolved-theme="dark"] .app,
+html[data-resolved-theme="dark"] .app-shell {
+  background: var(--mg-bg) !important;
+  color: var(--mg-text);
+}
+
+html[data-resolved-theme="dark"] .header h1,
+html[data-resolved-theme="dark"] h1,
+html[data-resolved-theme="dark"] h2,
+html[data-resolved-theme="dark"] h3,
+html[data-resolved-theme="dark"] strong {
+  color: var(--mg-text);
+}
+
+html[data-resolved-theme="dark"] input,
+html[data-resolved-theme="dark"] select,
+html[data-resolved-theme="dark"] textarea {
+  background: var(--mg-surface-2);
+  color: var(--mg-text);
+  border-color: var(--mg-border);
+}
+
+.android-ui-toolbar {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(14px, env(safe-area-inset-right));
+  z-index: 900;
+  pointer-events: none;
+}
+
+.android-theme-pill,
+.android-primary-pill,
+.android-close-button,
+.android-segmented-control button {
+  min-height: 44px;
+  border-radius: var(--mg-radius-pill);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.android-theme-pill {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 15px;
+  background: var(--mg-surface);
+  color: var(--mg-text);
+  border: 1px solid var(--mg-border);
+  box-shadow: var(--mg-shadow);
+  backdrop-filter: blur(18px);
+  font-weight: 700;
+}
+
+/* One UI style: generous cards, soft elevation and pill controls. */
+.card,
+.date-row,
+.continue-reading,
+.prayer-location-card,
+.next-prayer-card,
+.prayer-list-card,
+.special-time-card,
+.reminder-card,
+.prayer-settings-card,
+.more-item,
+.surah-item,
+.quran-search {
+  border-radius: var(--mg-radius-lg) !important;
+  border-color: var(--mg-border) !important;
+  box-shadow: var(--mg-shadow) !important;
+}
+
+.more-item,
+.surah-item,
+.more-item button,
+.secondary-button,
+.primary-button,
+.icon-button,
+.toggle-button {
+  min-height: 48px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.icon-button,
+.secondary-button,
+.primary-button,
+.toggle-button {
+  border-radius: var(--mg-radius-pill) !important;
+}
+
+.bottom-nav {
+  left: 12px !important;
+  right: 12px !important;
+  bottom: max(12px, env(safe-area-inset-bottom)) !important;
+  width: auto !important;
+  max-width: 736px;
+  margin: auto;
+  border-radius: 28px !important;
+  padding: 8px !important;
+  background: color-mix(in srgb, var(--mg-surface) 92%, transparent) !important;
+  border: 1px solid var(--mg-border);
+  box-shadow: 0 18px 44px rgba(0,0,0,.13) !important;
+  backdrop-filter: blur(24px) saturate(1.2);
+}
+
+.bottom-nav button {
+  min-height: 52px !important;
+  border-radius: 22px !important;
+  gap: 4px;
+}
+
+.quran-hadith-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(0,0,0,.38);
+  backdrop-filter: blur(8px);
+}
+
+.quran-hadith-sheet {
+  width: min(760px, 100%);
+  max-height: min(92vh, 900px);
+  overflow: auto;
+  background: var(--mg-bg);
+  color: var(--mg-text);
+  border-radius: 32px 32px 20px 20px;
+  padding: 22px 18px max(24px, env(safe-area-inset-bottom));
+  box-shadow: 0 -12px 50px rgba(0,0,0,.22);
+}
+
+.quran-hadith-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.quran-hadith-header h2 {
+  margin: 3px 0 0;
+  color: var(--mg-text);
+  font-size: clamp(24px, 6vw, 32px);
+  letter-spacing: -.7px;
+}
+
+.android-eyebrow {
+  color: var(--mg-accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.android-close-button {
+  width: 44px;
+  display: grid;
+  place-items: center;
+  background: var(--mg-surface-2);
+  color: var(--mg-text);
+  flex: 0 0 auto;
+}
+
+.android-segmented-control {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 5px;
+  margin-bottom: 18px;
+  border-radius: var(--mg-radius-pill);
+  background: var(--mg-surface-2);
+}
+
+.android-segmented-control button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: transparent;
+  color: var(--mg-muted);
+  font-weight: 800;
+}
+
+.android-segmented-control button.selected {
+  background: var(--mg-surface);
+  color: var(--mg-accent);
+  box-shadow: 0 5px 16px rgba(0,0,0,.08);
+}
+
+.android-library-card {
+  padding: 28px 22px;
+  text-align: center;
+  background: var(--mg-surface);
+  border: 1px solid var(--mg-border);
+  border-radius: var(--mg-radius-xl);
+  box-shadow: var(--mg-shadow);
+}
+
+.android-library-icon {
+  width: 66px;
+  height: 66px;
+  margin: 0 auto 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 23px;
+  background: var(--mg-surface-2);
+  color: var(--mg-accent);
+}
+
+.android-library-card h3 {
+  margin: 7px 0;
+  font-size: 25px;
+  color: var(--mg-text);
+}
+
+.android-library-card p {
+  margin: 0 auto 20px;
+  max-width: 520px;
+  color: var(--mg-muted);
+  line-height: 1.55;
+}
+
+.android-primary-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 22px;
+  background: var(--mg-accent);
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 8px 20px rgba(8,127,91,.22);
+}
+
+.android-hadith-wrap {
+  min-width: 0;
+}
+
+.android-hadith-wrap .tool-page {
+  padding: 0;
+}
+
+@media (max-width: 600px) {
+  .app-shell {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    padding-bottom: 110px !important;
+  }
+
+  .android-ui-toolbar {
+    top: max(10px, env(safe-area-inset-top));
+    right: 10px;
+  }
+
+  .android-theme-pill span {
+    display: none;
+  }
+
+  .android-theme-pill {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .quran-hadith-overlay {
+    padding: 0;
+  }
+
+  .quran-hadith-sheet {
+    max-height: 94vh;
+    border-radius: 30px 30px 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .quran-hadith-sheet,
+  .android-theme-pill {
+    animation: mg-soft-enter .18s ease-out;
+  }
+}
+
+@keyframes mg-soft-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
