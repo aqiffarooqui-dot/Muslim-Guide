@@ -115,15 +115,35 @@ jobs:
 
           python3 - <<'PY'
           from pathlib import Path
+          import re
           p = Path('android/app/build.gradle')
           s = p.read_text()
           marker = 'android {'
           if 'keystorePropertiesFile' not in s:
-              signing = """\n    def keystorePropertiesFile = rootProject.file('keystore.properties')\n    def keystoreProperties = new Properties()\n    if (keystorePropertiesFile.exists()) {\n        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\n    }\n\n    signingConfigs {\n        release {\n            if (keystorePropertiesFile.exists()) {\n                storeFile file(keystoreProperties['storeFile'])\n                storePassword keystoreProperties['storePassword']\n                keyAlias keystoreProperties['keyAlias']\n                keyPassword keystoreProperties['keyPassword']\n            }\n        }\n    }\n"""
+              signing = """
+    def keystorePropertiesFile = rootProject.file('keystore.properties')
+    def keystoreProperties = new Properties()
+    if (keystorePropertiesFile.exists()) {
+        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    }
+
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
+"""
               s = s.replace(marker, marker + signing, 1)
+          pattern = r'(buildTypes\s*\{\s*release\s*\{)'
           if 'signingConfig signingConfigs.release' not in s:
-              build_types = 'buildTypes {'
-              s = s.replace(build_types, build_types + "\n        release {\n            signingConfig signingConfigs.release\n        }", 1) if build_types in s and 'release {' not in s[s.index(build_types):] else s
+              s, count = re.subn(pattern, r'\1\n            signingConfig signingConfigs.release', s, count=1)
+              if count != 1:
+                  raise SystemExit('Could not locate the generated buildTypes release block.')
           p.write_text(s)
           PY
 
@@ -151,8 +171,12 @@ jobs:
         env:
           VERSION_NAME: ${{ steps.version.outputs.version_name }}
         run: |
+          set -euo pipefail
           mkdir -p release
-          cp android/app/build/outputs/apk/release/app-release.apk "release/Muslim-Guide-${VERSION_NAME}.apk"
+          APK_PATH=$(find android/app/build/outputs/apk -type f -name '*.apk' -print -quit)
+          test -n "$APK_PATH" || { echo "No release APK was generated."; find android/app/build/outputs -type f -maxdepth 5 | sort || true; exit 1; }
+          echo "Packaging APK: $APK_PATH"
+          cp "$APK_PATH" "release/Muslim-Guide-${VERSION_NAME}.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
